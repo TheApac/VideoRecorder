@@ -20,7 +20,7 @@ using namespace std;
 void deamonize();
 void createDirectoryVideos(string rootDirectory);
 int timeSinceDate(string dateToCompare);
-void removeContentOfDirectory(string path);
+void removeContentOfDirectory(string path, bool exact);
 int removeOldFile(int nbDays, string path);
 
 #endif /* UTILITY_H */

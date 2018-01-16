@@ -80,26 +80,27 @@ int timeSinceDate(string dateToCompare) {
     return difference;
 }
 
-void removeContentOfDirectory(string path) {
+void removeContentOfDirectory(string path, bool exact) {
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
     DIR *dir;
     struct dirent *ent;
     if ((dir = opendir(path.c_str())) != NULL) {
         while ((ent = readdir(dir)) != NULL) {
-            // check if the hour is passed
-            if (now->tm_hour > atoi(path.substr(path.size() - 2).c_str())) { //get only the 2 digits for the hour
-                DIR *subdir;
-                subdir = opendir(ent->d_name);
-                struct dirent *subent;
-                while ((subent = readdir(subdir)) != NULL) {
-                    remove(subent->d_name);
-                }
-                closedir(subdir);
-                remove(ent->d_name);
+            if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
+                continue;
+            }
+            string a = ent->d_name;
+            if (ent->d_type == DT_DIR && !exact) {
+                removeContentOfDirectory(path + "/" + ent->d_name, true);
+                printf("%s/%s\n",path.c_str(),ent->d_name);
+            } else if (ent->d_type == DT_DIR && exact && now->tm_hour > atoi(a.substr(a.size() - 2).c_str())) {
+                removeContentOfDirectory(path + "/" + ent->d_name, true);
+                printf("%s/%s\n",path.c_str(),ent->d_name);
+            } else if (ent->d_type != DT_DIR) {
+                printf("%s/%s\n", path.c_str(),ent->d_name);
             }
         }
-        closedir(dir);
     } else {
         // could not open directory
         perror("");
@@ -113,11 +114,18 @@ int removeOldFile(int nbDays, string path) {
     if ((dir = opendir(path.c_str())) != NULL) {
         // check all the files and directories within directory
         while ((ent = readdir(dir)) != NULL) {
+            if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
+                continue;
+            }
             // check if the directory is older than nbDays
-            if (strlen(ent->d_name) > 3 && timeSinceDate(ent->d_name) > nbDays) {
+            if (timeSinceDate(ent->d_name) > nbDays) {
                 string folderToRemove = path + "/" + ent->d_name; //absolute path to directory
-                removeContentOfDirectory(folderToRemove);
-                remove(folderToRemove.c_str()); // remove the directory
+                removeContentOfDirectory(folderToRemove, false);
+                printf("%s\n", folderToRemove.c_str()); // remove the directory
+            }
+            if (timeSinceDate(ent->d_name) == nbDays) {
+                string folderToRemove = path + "/" + ent->d_name; //absolute path to directory
+                removeContentOfDirectory(folderToRemove, true);
             }
         }
         closedir(dir);
