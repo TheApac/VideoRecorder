@@ -14,7 +14,18 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
+#include <string>
+using namespace std;
 
+class Utility {
+public:
+    static void deamonize();
+    static void createDirectoryVideos(string rootDirectory);
+    static int timeSinceDate(string dateToCompare);
+    static void removeContentOfDirectory(string path);
+    static int removeOldFile(int nbDays, string path);
+private:
+};
 
 #endif /* UTILITY_H */
 

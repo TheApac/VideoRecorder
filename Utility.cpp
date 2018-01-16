@@ -65,7 +65,7 @@ void createDirectoryVideos(string rootDirectory) {
     }
 }
 
-int timeBetweenDates(string dateToCompare) {
+int timeSinceDate(string dateToCompare) {
     time_t rawtime;
     struct tm * timeinfo;
     time(&rawtime);
@@ -114,7 +114,7 @@ int removeOldFile(int nbDays, string path) {
         // check all the files and directories within directory
         while ((ent = readdir(dir)) != NULL) {
             // check if the directory is older than nbDays
-            if (strlen(ent->d_name) > 3 && timeBetweenDates(ent->d_name) > nbDays) {
+            if (strlen(ent->d_name) > 3 && timeSinceDate(ent->d_name) > nbDays) {
                 string folderToRemove = path + "/" + ent->d_name; //absolute path to directory
                 removeContentOfDirectory(folderToRemove);
                 remove(folderToRemove.c_str()); // remove the directory

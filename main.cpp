@@ -14,18 +14,15 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include "Deamon.h"
 #include "Camera.h"
 #include "Utility.h"
-#include "Manager.h"
+#include "ManagerVideo.h"
 #include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat)
 #include <opencv2/highgui/highgui.hpp>  // Video write
 using namespace std;
 
-/*
- * 
- */
 int main(int argc, char** argv) {
     
+    Utility::createDirectoryVideos("/home/Alexandre/testDirectory");
     return EXIT_SUCCESS;
 }
