@@ -14,7 +14,17 @@
 #ifndef MANAGERVIDEO_H
 #define MANAGERVIDEO_H
 
+class ManagerVideo {
+public:
+    static ManagerVideo& getInstance(int ID);
+    virtual ~ManagerVideo();
+    int getID();
 
+private:
+    static ManagerVideo *instance;
+    ManagerVideo(int ID);
+    int ID;
+};
 
 #endif /* MANAGERVIDEO_H */
 

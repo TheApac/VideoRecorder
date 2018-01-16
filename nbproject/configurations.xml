@@ -224,7 +224,6 @@
                    displayName="Important Files"
                    projectFiles="false"
                    kind="IMPORTANT_FILES_FOLDER">
-      <itemPath>Makefile</itemPath>
     </logicalFolder>
     <itemPath>Makefile</itemPath>
   </logicalFolder>

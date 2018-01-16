@@ -1,7 +1,7 @@
 ## -*- Makefile -*-
 ##
 ## User: Alexandre
-## Time: 16 janv. 2018 10:54:21
+## Time: 16 janv. 2018 14:45:46
 ## Makefile created by Oracle Developer Studio.
 ##
 ## This file is generated automatically.
@@ -25,9 +25,10 @@ all: $(TARGETDIR_VideoRecorder)/VideoRecorder
 
 ## Target: VideoRecorder
 OBJS_VideoRecorder =  \
-	$(TARGETDIR_VideoRecorder)/Camera.o \
+	$(TARGETDIR_VideoRecorder)/main.o \
 	$(TARGETDIR_VideoRecorder)/Utility.o \
-	$(TARGETDIR_VideoRecorder)/main.o
+	$(TARGETDIR_VideoRecorder)/Camera.o \
+	$(TARGETDIR_VideoRecorder)/ManagerVideo.o
 USERLIBS_VideoRecorder = $(SYSLIBS_VideoRecorder) 
 DEPLIBS_VideoRecorder =  
 LDLIBS_VideoRecorder = $(USERLIBS_VideoRecorder)
@@ -39,14 +40,17 @@ $(TARGETDIR_VideoRecorder)/VideoRecorder: $(TARGETDIR_VideoRecorder) $(OBJS_Vide
 
 
 # Compile source files into .o files
-$(TARGETDIR_VideoRecorder)/Camera.o: $(TARGETDIR_VideoRecorder) Camera.cpp
-	$(COMPILE.cc) $(CCFLAGS_VideoRecorder) $(CPPFLAGS_VideoRecorder) -o $@ Camera.cpp
+$(TARGETDIR_VideoRecorder)/main.o: $(TARGETDIR_VideoRecorder) main.cpp
+	$(COMPILE.cc) $(CCFLAGS_VideoRecorder) $(CPPFLAGS_VideoRecorder) -o $@ main.cpp
 
 $(TARGETDIR_VideoRecorder)/Utility.o: $(TARGETDIR_VideoRecorder) Utility.cpp
 	$(COMPILE.cc) $(CCFLAGS_VideoRecorder) $(CPPFLAGS_VideoRecorder) -o $@ Utility.cpp
 
-$(TARGETDIR_VideoRecorder)/main.o: $(TARGETDIR_VideoRecorder) main.cpp
-	$(COMPILE.cc) $(CCFLAGS_VideoRecorder) $(CPPFLAGS_VideoRecorder) -o $@ main.cpp
+$(TARGETDIR_VideoRecorder)/Camera.o: $(TARGETDIR_VideoRecorder) Camera.cpp
+	$(COMPILE.cc) $(CCFLAGS_VideoRecorder) $(CPPFLAGS_VideoRecorder) -o $@ Camera.cpp
+
+$(TARGETDIR_VideoRecorder)/ManagerVideo.o: $(TARGETDIR_VideoRecorder) ManagerVideo.cpp
+	$(COMPILE.cc) $(CCFLAGS_VideoRecorder) $(CPPFLAGS_VideoRecorder) -o $@ ManagerVideo.cpp
 
 
 
@@ -54,9 +58,10 @@ $(TARGETDIR_VideoRecorder)/main.o: $(TARGETDIR_VideoRecorder) main.cpp
 clean:
 	rm -f \
 		$(TARGETDIR_VideoRecorder)/VideoRecorder \
-		$(TARGETDIR_VideoRecorder)/Camera.o \
+		$(TARGETDIR_VideoRecorder)/main.o \
 		$(TARGETDIR_VideoRecorder)/Utility.o \
-		$(TARGETDIR_VideoRecorder)/main.o
+		$(TARGETDIR_VideoRecorder)/Camera.o \
+		$(TARGETDIR_VideoRecorder)/ManagerVideo.o
 	$(CCADMIN)
 	rm -f -r $(TARGETDIR_VideoRecorder)
 
