@@ -58,11 +58,11 @@ void createDirectoryVideos(string rootDirectory) {
         day = "0" + day;
     }
     string date = rootDirectory + "/" + std::to_string(now->tm_year + 1900) + "." + month + "." + day; //get current date
-    string hour = "/" + date + "/H" + to_string(now->tm_hour); //get current hour
+    string hour = date + "/H" + to_string(now->tm_hour); //get current hour
     if (stat(date.c_str(), &info) != 0) {
         mkdir(date.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory YYYY.MM.DD
-        mkdir(hour.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory "H"+HH in previously created directory
     }
+    mkdir(hour.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory "H"+HH in previously created directory
 }
 
 int timeSinceDate(string dateToCompare) {
