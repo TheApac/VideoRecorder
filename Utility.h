@@ -17,15 +17,11 @@
 #include <string>
 using namespace std;
 
-class Utility {
-public:
-    static void deamonize();
-    static void createDirectoryVideos(string rootDirectory);
-    static int timeSinceDate(string dateToCompare);
-    static void removeContentOfDirectory(string path);
-    static int removeOldFile(int nbDays, string path);
-private:
-};
+void deamonize();
+void createDirectoryVideos(string rootDirectory);
+int timeSinceDate(string dateToCompare);
+void removeContentOfDirectory(string path);
+int removeOldFile(int nbDays, string path);
 
 #endif /* UTILITY_H */
 

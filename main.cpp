@@ -23,6 +23,6 @@ using namespace std;
 
 int main(int argc, char** argv) {
     
-    Utility::createDirectoryVideos("/home/Alexandre/testDirectory");
+    createDirectoryVideos("/home/Alexandre/testDirectory");
     return EXIT_SUCCESS;
 }

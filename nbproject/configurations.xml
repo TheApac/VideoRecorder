@@ -202,7 +202,6 @@
       <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/Camera.h</itemPath>
       <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.h</itemPath>
       <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.h</itemPath>
-      <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/test.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -215,7 +214,6 @@
       <itemPath>ManagerVideo.cpp</itemPath>
       <itemPath>Utility.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
-      <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -228,6 +226,7 @@
                    kind="IMPORTANT_FILES_FOLDER">
       <itemPath>Makefile</itemPath>
     </logicalFolder>
+    <itemPath>Makefile</itemPath>
   </logicalFolder>
   <sourceRootList>
     <Elem>/home/Alexandre/NetBeansProjects/CppApplication_1/opencv2</Elem>
@@ -1024,17 +1023,9 @@
             tool="3"
             flavor2="0">
       </item>
-      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/test.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
       <item path="Camera.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Makefile" ex="false" tool="3" flavor2="0">
       </item>
       <item path="ManagerVideo.cpp" ex="false" tool="1" flavor2="0">
         <ccTool>
@@ -1826,17 +1817,9 @@
             tool="3"
             flavor2="0">
       </item>
-      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/test.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
       <item path="Camera.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Makefile" ex="false" tool="3" flavor2="0">
       </item>
       <item path="ManagerVideo.cpp" ex="false" tool="1" flavor2="0">
       </item>

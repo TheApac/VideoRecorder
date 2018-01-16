@@ -35,7 +35,6 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/_ext/c9a38b4e/test.o \
 	${OBJECTDIR}/Camera.o \
 	${OBJECTDIR}/ManagerVideo.o \
 	${OBJECTDIR}/Utility.o \
@@ -65,11 +64,6 @@ LDLIBSOPTIONS=
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videorecorder: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videorecorder ${OBJECTFILES} ${LDLIBSOPTIONS}
-
-${OBJECTDIR}/_ext/c9a38b4e/test.o: /home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp
-	${MKDIR} -p ${OBJECTDIR}/_ext/c9a38b4e
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/c9a38b4e/test.o /home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp
 
 ${OBJECTDIR}/Camera.o: Camera.cpp
 	${MKDIR} -p ${OBJECTDIR}
