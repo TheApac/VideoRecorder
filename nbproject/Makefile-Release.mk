@@ -35,8 +35,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
+	${OBJECTDIR}/_ext/c9a38b4e/test.o \
 	${OBJECTDIR}/Camera.o \
-	${OBJECTDIR}/Deamon.o \
 	${OBJECTDIR}/ManagerVideo.o \
 	${OBJECTDIR}/Utility.o \
 	${OBJECTDIR}/main.o
@@ -60,21 +60,21 @@ LDLIBSOPTIONS=
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videorecorder
 
-${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1: ${OBJECTFILES}
+${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videorecorder: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1 ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/videorecorder ${OBJECTFILES} ${LDLIBSOPTIONS}
+
+${OBJECTDIR}/_ext/c9a38b4e/test.o: /home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp
+	${MKDIR} -p ${OBJECTDIR}/_ext/c9a38b4e
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/c9a38b4e/test.o /home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp
 
 ${OBJECTDIR}/Camera.o: Camera.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Camera.o Camera.cpp
-
-${OBJECTDIR}/Deamon.o: Deamon.cpp
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Deamon.o Deamon.cpp
 
 ${OBJECTDIR}/ManagerVideo.o: ManagerVideo.cpp
 	${MKDIR} -p ${OBJECTDIR}

@@ -199,10 +199,10 @@
         <itemPath>/home/Alexandre/NetBeansProjects/CppApplication_1/opencv2/opencv.hpp</itemPath>
         <itemPath>/home/Alexandre/NetBeansProjects/CppApplication_1/opencv2/opencv_modules.hpp</itemPath>
       </logicalFolder>
-      <itemPath>Camera.h</itemPath>
-      <itemPath>Deamon.h</itemPath>
-      <itemPath>ManagerVideo.h</itemPath>
-      <itemPath>Utility.h</itemPath>
+      <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/Camera.h</itemPath>
+      <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.h</itemPath>
+      <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.h</itemPath>
+      <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/test.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -212,10 +212,10 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>Camera.cpp</itemPath>
-      <itemPath>Deamon.cpp</itemPath>
       <itemPath>ManagerVideo.cpp</itemPath>
       <itemPath>Utility.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
+      <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -1009,24 +1009,39 @@
             tool="3"
             flavor2="0">
       </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/Camera.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/test.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
       <item path="Camera.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Camera.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="Deamon.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Deamon.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="ManagerVideo.cpp" ex="false" tool="1" flavor2="0">
         <ccTool>
           <warningLevel>2</warningLevel>
         </ccTool>
       </item>
-      <item path="ManagerVideo.h" ex="false" tool="1" flavor2="0">
-      </item>
       <item path="Utility.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Utility.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -1796,21 +1811,36 @@
             tool="3"
             flavor2="0">
       </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/Camera.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/test.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
       <item path="Camera.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Camera.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="Deamon.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Deamon.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="ManagerVideo.cpp" ex="false" tool="1" flavor2="0">
       </item>
-      <item path="ManagerVideo.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="Utility.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Utility.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>

@@ -35,8 +35,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
+	${OBJECTDIR}/_ext/c9a38b4e/test.o \
 	${OBJECTDIR}/Camera.o \
-	${OBJECTDIR}/Deamon.o \
 	${OBJECTDIR}/ManagerVideo.o \
 	${OBJECTDIR}/Utility.o \
 	${OBJECTDIR}/main.o
@@ -66,25 +66,20 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1 ${OBJECTFILES} ${LDLIBSOPTIONS}
 
+${OBJECTDIR}/_ext/c9a38b4e/test.o: /home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp
+	${MKDIR} -p ${OBJECTDIR}/_ext/c9a38b4e
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/c9a38b4e/test.o /home/Alexandre/NetBeansProjects/VideoRecorder/test.cpp
+
 ${OBJECTDIR}/Camera.o: Camera.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Camera.o Camera.cpp
 
-${OBJECTDIR}/Deamon.o: Deamon.cpp
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Deamon.o Deamon.cpp
-
 ${OBJECTDIR}/ManagerVideo.o: ManagerVideo.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ManagerVideo.o ManagerVideo.cpp
-
-${OBJECTDIR}/ManagerVideo.h.gch: ManagerVideo.h
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -std=c++11 -MMD -MP -MF "$@.d" -o "$@" ManagerVideo.h
 
 ${OBJECTDIR}/Utility.o: Utility.cpp
 	${MKDIR} -p ${OBJECTDIR}
