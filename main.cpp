@@ -23,14 +23,6 @@ using namespace std;
 
 int main(int argc, char** argv) {
     
-    ManagerVideo m = ManagerVideo::getInstance(1);
-    ManagerVideo a = ManagerVideo::getInstance(2);
-    ManagerVideo b = ManagerVideo::getInstance(3);
-    ManagerVideo c = ManagerVideo::getInstance(4);
-    
-    cout << m.getID() << endl;
-    cout << a.getID() << endl;
-    cout << b.getID() << endl;
-    cout << c.getID() << endl;
+    removeOldFile(1, "/home/Alexandre/testDirectory");
     return EXIT_SUCCESS;
 }

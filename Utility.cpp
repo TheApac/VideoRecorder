@@ -93,16 +93,17 @@ void removeContentOfDirectory(string path, bool exact) {
             if (ent->d_type == DT_DIR && !exact) { // if the date is higher than nbDays remove everything in every subdirectories
                 removeContentOfDirectory(path + "/" + ent->d_name, true);
                 string dirToRemove = path+"/"+ent->d_name;
-                remove(dirToRemove.c_str()); // remove the subdirectory
+                printf("%s\n",dirToRemove.c_str()); // remove the subdirectory
             } else if (ent->d_type == DT_DIR && exact && now->tm_hour > atoi(entryName.substr(entryName.size() - 2).c_str())) { // else only remove when the hour indicated is lower than current hour
                 removeContentOfDirectory(path + "/" + ent->d_name, true);
                 string dirToRemove = path+"/"+ent->d_name;
-                remove(dirToRemove.c_str()); // remove the subdirectory
+                printf("%s\n",dirToRemove.c_str()); // remove the subdirectory
             } else if (ent->d_type != DT_DIR) {
                 string fileToRemove = path+"/"+ent->d_name;
-                remove(fileToRemove.c_str()); // if it's not a directory, remove it
+                printf("%s\n",fileToRemove.c_str()); // if it's not a directory, remove it
             }
         }
+        closedir(dir);
     } else {
         // could not open directory
         perror("");
@@ -123,7 +124,7 @@ int removeOldFile(int nbDays, string path) {
             if (timeSinceDate(ent->d_name) > nbDays) {
                 string folderToRemove = path + "/" + ent->d_name; //absolute path to directory
                 removeContentOfDirectory(folderToRemove, false); // empty the directory
-                remove(folderToRemove.c_str()); // remove the directory
+                printf("%s\n",folderToRemove.c_str()); // remove the directory
             }
             if (timeSinceDate(ent->d_name) == nbDays) { // if date exactly equal to nbDays, we don't delete files where hour is higher than current hour
                 string folderToRemove = path + "/" + ent->d_name; //absolute path to directory
