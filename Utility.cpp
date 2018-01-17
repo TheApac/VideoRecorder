@@ -22,7 +22,7 @@ static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) 
     if ((size == 0) || (nmemb == 0) || ((size * nmemb) < 1)) {
         return 0;
     }
-    const char *payload_text[] = { // table with every element to send
+    const char *payload_text[] = {// table with every element to send
         defineDate().c_str(),
         "To: " TO_MAIL "\r\n", //sender
         "From: " FROM_MAIL "\r\n", //recipient
@@ -31,7 +31,7 @@ static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) 
         "\r\n", /* empty line to divide headers from body*/
         /* start of the email body
          Could add as many line as wanted, even empty ones*/
-        "An error as occured.\r\n", 
+        "An error as occured.\r\n",
         /* End of email body*/
         NULL //end of the email
     };
@@ -45,7 +45,7 @@ static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) 
     return 0;
 }
 
-string defineDate() {
+static string defineDate() {
     // return the date line to include in the mail
     string date = "";
     time_t t = time(0); // get time now
@@ -92,7 +92,7 @@ string defineDate() {
         case 11: date += "Dec";
     }
     date += " " + to_string(now->tm_year + 1900) + " "; // the year is the number of year between 1900 and today
-    if (now->tm_hour > 10) {    // add a 0 in front of the hour if current time between 0 and 9
+    if (now->tm_hour > 10) { // add a 0 in front of the hour if current time between 0 and 9
         date += to_string(now->tm_hour);
     } else {
         date += "0" + to_string(now->tm_hour);
@@ -197,7 +197,7 @@ void createDirectoryVideos(string rootDirectory) {
     mkdir(hour.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory "H"+HH in previously created directory
 }
 
-int timeSinceDate(string dateToCompare) {
+static int timeSinceDate(string dateToCompare) {
     // Calculate the number of days ellapsed since a date formated as "YYYY:MM:DD"
     time_t rawtime;
     struct tm* timeinfo;
@@ -208,12 +208,12 @@ int timeSinceDate(string dateToCompare) {
     timeinfo->tm_mday = atoi(dateToCompare.substr(8).c_str());
     time_t x = mktime(timeinfo); // create a time_t struct from the timeinfo
     time_t raw_time = time(NULL); // create a time_t struct with current time
-    time_t y = mktime(localtime(&raw_time)); 
+    time_t y = mktime(localtime(&raw_time));
     double difference = difftime(y, x) / (60 * 60 * 24); // calculate the number of ms between two dates, convert it in days
     return difference;
 }
 
-void removeContentOfDirectory(string path, bool exact) {
+static void removeContentOfDirectory(string path, bool exact) {
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
     DIR *dir;

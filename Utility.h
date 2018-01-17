@@ -27,12 +27,13 @@ using namespace std;
 struct upload_status {
     int lines_read;
 };
+
 int sendEmail();
-string defineDate();
+static string defineDate();
 void deamonize();
 void createDirectoryVideos(string rootDirectory);
-int timeSinceDate(string dateToCompare);
-void removeContentOfDirectory(string path, bool exact);
+static int timeSinceDate(string dateToCompare);
+static void removeContentOfDirectory(string path, bool exact);
 int removeOldFile(int nbDays, string path);
 
 #endif /* UTILITY_H */

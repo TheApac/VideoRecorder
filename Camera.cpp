@@ -29,8 +29,8 @@ Camera::Camera(string str) {
         if (!inputVideo.isOpened()) {
             break;
         }
-
     }
 }
 
-Camera::~Camera() {}
+Camera::~Camera() {
+}
