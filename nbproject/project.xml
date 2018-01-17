@@ -6,11 +6,11 @@
             <name>VideoRecorder</name>
             <c-extensions/>
             <cpp-extensions>cpp</cpp-extensions>
-            <header-extensions>h,hpp</header-extensions>
+            <header-extensions>h</header-extensions>
             <sourceEncoding>UTF-8</sourceEncoding>
             <make-dep-projects/>
             <sourceRootList>
-                <sourceRootElem>/home/Alexandre/NetBeansProjects/CppApplication_1/opencv2</sourceRootElem>
+                <sourceRootElem>../CppApplication_1/opencv2</sourceRootElem>
             </sourceRootList>
             <confList>
                 <confElem>

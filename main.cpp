@@ -19,10 +19,11 @@
 #include "ManagerVideo.h"
 #include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat)
 #include <opencv2/highgui/highgui.hpp>  // Video write
+
+
 using namespace std;
 
 int main(int argc, char** argv) {
-    
-    removeOldFile(1, "/home/Alexandre/testDirectory");
+    sendEmail();
     return EXIT_SUCCESS;
 }

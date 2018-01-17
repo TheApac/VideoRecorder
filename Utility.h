@@ -14,9 +14,21 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
+#define FROM_ADDR    "<no-reply@2n-tech.com>"
+#define TO_ADDR      "<a.cuevas@2n-tech.com>"
+#define DATE_MAIL ""
+#define FROM_MAIL "2N Technologies" FROM_ADDR
+#define TO_MAIL   "Notified person " TO_ADDR
+
 #include <string>
+
 using namespace std;
 
+struct upload_status {
+    int lines_read;
+};
+int sendEmail();
+string defineDate();
 void deamonize();
 void createDirectoryVideos(string rootDirectory);
 int timeSinceDate(string dateToCompare);
