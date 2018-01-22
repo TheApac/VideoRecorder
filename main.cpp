@@ -24,13 +24,13 @@
 using namespace std;
 
 int main(int argc, char** argv) {
-    time_t t = time(0);
-    long int secondsToStop = time(&t) + 30;
-    while (time(&t) < secondsToStop) {
-        printf("Current sec : %ld\n", time(&t));
-        printf("Sec to stop : %ld\n", secondsToStop);
-        sleep(5);
-    }
-
+    //time_t t = time(0);
+    //long int secondsToStop = time(&t) + 30;
+    //while (time(&t) < secondsToStop) {
+    //    printf("Current sec : %ld\n", time(&t));
+    //    printf("Sec to stop : %ld\n", secondsToStop);
+    //    sleep(5);
+    //}
+    Camera *c = new Camera("");
     return EXIT_SUCCESS;
 }
