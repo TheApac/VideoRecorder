@@ -36,6 +36,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/Camera.o \
+	${OBJECTDIR}/CustomException.o \
 	${OBJECTDIR}/ManagerVideo.o \
 	${OBJECTDIR}/Utility.o \
 	${OBJECTDIR}/main.o
@@ -69,6 +70,11 @@ ${OBJECTDIR}/Camera.o: Camera.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Camera.o Camera.cpp
+
+${OBJECTDIR}/CustomException.o: CustomException.cpp
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/CustomException.o CustomException.cpp
 
 ${OBJECTDIR}/ManagerVideo.o: ManagerVideo.cpp
 	${MKDIR} -p ${OBJECTDIR}

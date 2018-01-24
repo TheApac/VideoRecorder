@@ -28,6 +28,7 @@ struct upload_status {
     int lines_read;
 };
 
+bool isOnlyNumeric(string &str);
 int sendEmail();
 static string defineDate();
 void deamonize();

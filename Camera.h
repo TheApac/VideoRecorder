@@ -19,11 +19,29 @@ using namespace std;
 
 class Camera {
 public:
-    Camera(string str);
+    Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url);
     virtual ~Camera();
+    int GetID() const;
+
+    string GetDirectory() const;
+
+    string GetLog() const;
+
+    string GetName() const;
+
+    int GetNbdays() const;
+
+    string GetPassword() const;
+
+    string GetUrl() const;
+
 private:
     string directory;
+    int nbdays;
     int ID;
+    string name;
+    string log; 
+    string password;
     string url;
 };
 

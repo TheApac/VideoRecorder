@@ -15,10 +15,19 @@
 
 using namespace std;
 
+bool isOnlyNumeric(string &str) {
+    for (int i = 0; i < str.size() -1; ++i) {
+        char a = str.at(i);
+        if (a < '0'  || a > '9') {
+            return false;
+        }
+    }
+    return true;
+}
+
 static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) {
     struct upload_status *upload_ctx = (struct upload_status *) userp;
     const char *data;
-
     if ((size == 0) || (nmemb == 0) || ((size * nmemb) < 1)) {
         return 0;
     }

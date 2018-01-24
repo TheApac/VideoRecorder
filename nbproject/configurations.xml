@@ -5,6 +5,7 @@
                    displayName="Header Files"
                    projectFiles="true">
       <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/Camera.h</itemPath>
+      <itemPath>CustomException.h</itemPath>
       <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.h</itemPath>
       <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.h</itemPath>
     </logicalFolder>
@@ -16,6 +17,7 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>Camera.cpp</itemPath>
+      <itemPath>CustomException.cpp</itemPath>
       <itemPath>ManagerVideo.cpp</itemPath>
       <itemPath>Utility.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
@@ -87,6 +89,10 @@
       </item>
       <item path="Camera.cpp" ex="false" tool="1" flavor2="0">
       </item>
+      <item path="CustomException.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="CustomException.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="Makefile" ex="false" tool="3" flavor2="0">
       </item>
       <item path="ManagerVideo.cpp" ex="false" tool="1" flavor2="0">
@@ -135,6 +141,10 @@
             flavor2="0">
       </item>
       <item path="Camera.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="CustomException.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="CustomException.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="Makefile" ex="false" tool="3" flavor2="0">
       </item>
