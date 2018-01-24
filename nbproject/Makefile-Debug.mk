@@ -37,6 +37,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/Camera.o \
 	${OBJECTDIR}/CustomException.o \
+	${OBJECTDIR}/Manager.o \
 	${OBJECTDIR}/ManagerVideo.o \
 	${OBJECTDIR}/Utility.o \
 	${OBJECTDIR}/main.o
@@ -75,6 +76,11 @@ ${OBJECTDIR}/CustomException.o: CustomException.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/CustomException.o CustomException.cpp
+
+${OBJECTDIR}/Manager.o: Manager.cpp
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Manager.o Manager.cpp
 
 ${OBJECTDIR}/ManagerVideo.o: ManagerVideo.cpp
 	${MKDIR} -p ${OBJECTDIR}

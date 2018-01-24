@@ -13,12 +13,37 @@
 
 #include "CustomException.h"
 
-CustomException::CustomException() {
+CustomException::CustomException(std::string const& msg) : _msg(msg) {
+    _msg = msg;
 }
 
-CustomException::CustomException(const CustomException& orig) {
+CustomException::~CustomException() throw () {
 }
 
-CustomException::~CustomException() {
+const char *CustomException::what() const throw () {
+    return _msg.data();
 }
 
+UndefinedField::UndefinedField(std::string const &msg) : CustomException("Undefined field : " + msg) {
+}
+
+InvalidID::InvalidID(std::string const &msg) : CustomException("Invalid id : " + msg + " should be only digits") {
+}
+
+InvalidPath::InvalidPath(std::string const &msg) : CustomException("Invalid path : " + msg) {
+}
+
+InvalidNbDays::InvalidNbDays(std::string const &msg) : CustomException("Invalid number of days : " + msg + " should be only digits") {
+}
+
+InvalidURL::InvalidURL(std::string const &msg) : CustomException("Invalid url format : " + msg) {
+}
+
+DuplicateField::DuplicateField(std::string const &msg) : CustomException("Field duplicated : " + msg) {
+}
+
+InvalidLine::InvalidLine(std::string const &msg) : CustomException("Invalid line : " + msg) {
+}
+
+EmptyLine::EmptyLine(std::string const &msg) : CustomException("Empty line in config file : " + msg) {
+}

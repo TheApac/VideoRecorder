@@ -28,7 +28,6 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
     this->log = log;
     this->password = password;
     this->url = url;
-
     //createDirectoryVideos(this->directory);
     //while (1) {
     ////VideoCapture inputVideo("rtsp://" + this->url);

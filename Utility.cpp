@@ -16,13 +16,12 @@
 using namespace std;
 
 bool isOnlyNumeric(string &str) {
-    for (int i = 0; i < str.size() -1; ++i) {
-        char a = str.at(i);
-        if (a < '0'  || a > '9') {
+    for (int positionChar = 0; positionChar < str.size() - 1; ++positionChar) { // iterate through the string
+        if (str.at(positionChar) < '0' || str.at(positionChar) > '9') { // if a non-digit char is found
             return false;
         }
     }
-    return true;
+    return true; // return true if end of function is reached
 }
 
 static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) {
@@ -132,9 +131,9 @@ int sendEmail() {
     curl = curl_easy_init();
     if (curl) {
         /* This is the configuration of the mailserver */
-        curl_easy_setopt(curl, CURLOPT_USERNAME, "no-reply@2n-tech.com"); // TODO encryption
+        curl_easy_setopt(curl, CURLOPT_USERNAME, "no-reply@2n-tech.com");
         curl_easy_setopt(curl, CURLOPT_PASSWORD, "hnO4vbpl54pw0PIQ"); // TODO encryption
-        curl_easy_setopt(curl, CURLOPT_URL, "smtp://ssl0.ovh.net"); // TODO encryption
+        curl_easy_setopt(curl, CURLOPT_URL, "smtp://ssl0.ovh.net");
 
         curl_easy_setopt(curl, CURLOPT_MAIL_FROM, FROM_ADDR);
         /* Add recipient, in this particular case they correspond to the
