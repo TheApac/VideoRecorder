@@ -19,9 +19,10 @@ using namespace std;
 
 int main(int argc, char** argv) {
     //"/home/Alexandre/Téléchargements/cameras.ini"
-    Manager* manager = new Manager("/home/Alexandre/Téléchargements/cameras.ini");
+    Manager *manager = new Manager(string("/home/Alexandre/Téléchargements/cameras.ini"));
     if (manager != nullptr) {
         printf("Manager created");
     }
+    //sendEmail("test");
     manager->~Manager();
 }

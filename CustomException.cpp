@@ -27,13 +27,13 @@ const char *CustomException::what() const throw () {
 UndefinedField::UndefinedField(std::string const &msg) : CustomException("Undefined field : " + msg) {
 }
 
-InvalidID::InvalidID(std::string const &msg) : CustomException("Invalid id : " + msg + " should be only digits") {
+InvalidID::InvalidID(std::string const &msg) : CustomException("Invalid id : " + msg + " should be a positive integer") {
 }
 
 InvalidPath::InvalidPath(std::string const &msg) : CustomException("Invalid path : " + msg) {
 }
 
-InvalidNbDays::InvalidNbDays(std::string const &msg) : CustomException("Invalid number of days : " + msg + " should be only digits") {
+InvalidNbDays::InvalidNbDays(std::string const &msg) : CustomException("Invalid number of days : " + msg + " should be a positive integer") {
 }
 
 InvalidURL::InvalidURL(std::string const &msg) : CustomException("Invalid url format : " + msg) {

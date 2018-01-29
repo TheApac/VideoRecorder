@@ -24,7 +24,7 @@ public:
     Manager(string ConfigFile);
     virtual ~Manager();
 private:
-    bool isCameraOver();
+    void CameraOver(int &enregistrable);
     vector<Camera*> CameraList;
     int nbdays;
     string path;
@@ -36,4 +36,3 @@ private:
 };
 
 #endif /* MANAGER_H */
-

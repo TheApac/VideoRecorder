@@ -29,7 +29,7 @@ struct upload_status {
 };
 
 bool isOnlyNumeric(string &str);
-int sendEmail();
+int sendEmail(string messageContent);
 static string defineDate();
 void deamonize();
 void createDirectoryVideos(string rootDirectory);

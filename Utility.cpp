@@ -15,6 +15,8 @@
 
 using namespace std;
 
+string mailContent="";
+
 bool isOnlyNumeric(string &str) {
     for (int positionChar = 0; positionChar < str.size() - 1; ++positionChar) { // iterate through the string
         if (str.at(positionChar) < '0' || str.at(positionChar) > '9') { // if a non-digit char is found
@@ -39,7 +41,7 @@ static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) 
         "\r\n", /* empty line to divide headers from body*/
         /* start of the email body
          Could add as many line as wanted, even empty ones*/
-        "An error as occured.\r\n",
+        mailContent.c_str(),
         /* End of email body*/
         NULL //end of the email
     };
@@ -100,19 +102,19 @@ static string defineDate() {
         case 11: date += "Dec";
     }
     date += " " + to_string(now->tm_year + 1900) + " "; // the year is the number of year between 1900 and today
-    if (now->tm_hour > 10) { // add a 0 in front of the hour if current time between 0 and 9
+    if (now->tm_hour >= 10) { // add a 0 in front of the hour if current time between 0 and 9
         date += to_string(now->tm_hour);
     } else {
         date += "0" + to_string(now->tm_hour);
     }
     date += ":"; //separate hour and minute
-    if (now->tm_min > 10) { // add a 0 in front of the minute if current time between 0 and 9
+    if (now->tm_min >= 10) { // add a 0 in front of the minute if current time between 0 and 9
         date += to_string(now->tm_min);
     } else {
         date += "0" + to_string(now->tm_min);
     }
     date += ":"; //separate minute and second
-    if (now->tm_sec > 10) { // add a 0 in front of the second if current time between 0 and 9
+    if (now->tm_sec >= 10) { // add a 0 in front of the second if current time between 0 and 9
         date += to_string(now->tm_sec);
     } else {
         date += "0" + to_string(now->tm_sec);
@@ -120,16 +122,17 @@ static string defineDate() {
     return "Date :" + date + "\r\n"; // format the date for an email
 }
 
-int sendEmail() {
+int sendEmail(string messageContent) {
     CURL *curl;
     CURLcode res = CURLE_OK;
     struct curl_slist *recipients = NULL;
     struct upload_status upload_ctx;
-
+    
     upload_ctx.lines_read = 0;
 
     curl = curl_easy_init();
     if (curl) {
+        mailContent = messageContent+"Time of error : "+defineDate().substr(6);
         /* This is the configuration of the mailserver */
         curl_easy_setopt(curl, CURLOPT_USERNAME, "no-reply@2n-tech.com");
         curl_easy_setopt(curl, CURLOPT_PASSWORD, "hnO4vbpl54pw0PIQ"); // TODO encryption

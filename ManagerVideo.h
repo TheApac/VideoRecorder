@@ -14,6 +14,11 @@
 #ifndef MANAGERVIDEO_H
 #define MANAGERVIDEO_H
 
+
+
+
+
+using namespace std;
 class ManagerVideo {
 public:
     static ManagerVideo& getInstance(int ID);
