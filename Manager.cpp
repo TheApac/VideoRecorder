@@ -34,69 +34,68 @@ Manager::Manager(string ConfigFile) {
         while (std::getline(file, line)) { // iterate through each line of the configuration file
             ++nbLinesRead; // used to display which line has a problem
             if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
-                if (line.substr(0, line.find_first_of("=")) == "ID") {
-                    string toCompare = line.substr(line.find_first_of("=") + 1);
+                string parameterName = line.substr(0, line.find_first_of("="));
+                string parameterValue = line.substr(line.find_first_of("=") + 1);
+                if (parameterName == "ID") {
+                    string toCompare = parameterValue;
                     if (isOnlyNumeric(toCompare)) { // check if the ID is a positive integer
                         if (ID == -1) { // if no ID is set for the current camera
-                            ID = atoi(line.substr(line.find_first_of("=") + 1).c_str());
+                            ID = atoi(parameterValue.c_str());
                         } else { // two IDs are defined for the same camera
                             throw DuplicateField("ID (" + to_string(ID) + ")");
                         }
                     } else { // The id is not a positive integer
                         throw InvalidID(toCompare.substr(0, toCompare.size() - 1));
                     }
-                } else if (line.substr(0, line.find_first_of("=")) == "Nom") {
+                } else if (parameterName == "Nom") {
                     if (name == "") { // if no name is set for the current camera
-                        name = line.substr(line.find_first_of("=") + 1);
+                        name = parameterValue;
                     } else { // two names are defined for the same camera
                         throw DuplicateField("Name (" + name.substr(0, name.size() - 1) + ")");
                     }
-                } else if (line.substr(0, line.find_first_of("=")) == "Login") {
+                } else if (parameterName == "Login") {
                     if (log == "") { // if no log is set for the current camera
-                        log = line.substr(line.find_first_of("=") + 1);
+                        log = parameterValue;
                     } else { // two logs are defined for the same camera
                         throw DuplicateField("Log (" + log.substr(0, log.size() - 1) + ")");
                     }
-                } else if (line.substr(0, line.find_first_of("=")) == "Mdp") {
+                } else if (parameterName == "Mdp") {
                     if (password == "") { // if no password is set for the current camera
-                        password = line.substr(line.find_first_of("=") + 1);
+                        password = parameterValue;
                     } else { // two passwords are defined for the same camera
                         throw DuplicateField("Password (" + password.substr(0, log.size() - 1) + ")");
                     }
-                } else if (line.substr(0, line.find_first_of("=")) == "URLCamera") {
+                } else if (parameterName == "URLCamera") {
                     if (url == "") { // if no url is set for the current camera
-                        url = line.substr(line.find_first_of("=") + 1);
+                        url = parameterValue;
                     } else { // two URLs are defined for the same camera
                         throw DuplicateField("URL (" + url.substr(0, log.size() - 1) + ")");
                     }
-                } else if (line.substr(0, line.find_first_of("=")) == "Enregistrable") {
-                    if (line.substr(line.find_first_of("=") + 1).compare("1") == 1) { // check if the camera is recordable
-                        enregistrable = 1;
-                    } else if (line.substr(line.find_first_of("=") + 1).compare("0") == 1) { // if not, update the param
-                        enregistrable = 0;
-                    } else { // if field not equal to 0 or 1, throw error
+                } else if (parameterName == "Enregistrable") {
+                    enregistrable = atoi(parameterValue.c_str());
+                    if (enregistrable != 0 && enregistrable != 1) {// if field not equal to 0 or 1, throw error
                         throw InvalidLine(to_string(nbLinesRead) + " - enregistrable must be 0 or 1");
                     }
-                } else if (line.substr(0, line.find_first_of("=")) == "DossierEnreg") {
+                } else if (parameterName == "DossierEnreg") {
                     if (path == "") {
-                        path = line.substr(line.find_first_of("=") + 1);
+                        path = parameterValue;
                     } else { //only one saving directory can be specified
                         throw DuplicateField("Path");
                     }
-                } else if (line.substr(0, line.find_first_of("=")) == "NbJourStock") {
-                    string toCompare = line.substr(line.find_first_of("=") + 1);
+                } else if (parameterName == "NbJourStock") {
+                    string toCompare = parameterValue;
                     if (isOnlyNumeric(toCompare)) { //check if the number of days to keep is a positive integer
                         if (nbdays == -1) {
-                            nbdays = atoi(line.substr(line.find_first_of("=") + 1).c_str());
+                            nbdays = atoi(parameterValue.c_str());
                         } else { //throw error if two number of days are specified
                             throw DuplicateField("Number of days to stock");
                         }
                     } else {
                         throw InvalidNbDays(toCompare.substr(0, toCompare.size() - 1));
                     }
-                } else if (line.substr(0, line.find_first_of("=")) == "Site") {
+                } else if (parameterName == "Site") {
                     if (location == "") {
-                        location = line.substr(line.find_first_of("=") + 1);
+                        location = parameterValue;
                     } else { //only one location can be specified
                         throw DuplicateField("Site");
                     }
@@ -115,30 +114,32 @@ Manager::Manager(string ConfigFile) {
                 }
             }
         }
-        // check for the last camera of the file
-        CameraOver(enregistrable);
+        CameraOver(enregistrable); // check for the last camera of the file
         cout << "Number of valid cameras : " << CameraList.size() << endl;
     } catch (CustomException &e) {
-        // If any error is encountered, display the error and the line
-        cerr << e.what() << " on line : " << nbLinesRead << endl;
+        cerr << e.what() << " on line : " << nbLinesRead << endl; // If any error is encountered, display the error and the line
         string error = "Error in config file given as parameter for the Manager\n"
                 "The file : " + ConfigFile + " returned an " + string(e.what()) + " on line " + to_string(nbLinesRead) + "\n\n";
         if (location != "") {
             error += "Concerned site : " + location + "\n";
+        } else {
+            char hostname[128] = "";
+            gethostname(hostname, sizeof (hostname));
+            error += "Hostname of server : " + string(hostname) + "\n";
         }
         sendEmail(error);
         // Quit the constructor
         exit(EXIT_FAILURE);
     }
-    for(Camera *camera : CameraList) {
-        cout << camera->GetName() <<endl; //TODO supprimer cette ligne
-        sleep(5);
+    for (Camera *camera : CameraList) {
+        cout << camera->GetName() << endl; //TODO supprimer cette ligne
         //camera->Record
+        sleep(5);
     }
 }
 
 void Manager::CameraOver(int &enregistrable) {
-    if (ID != -1 && name != "" && log != "" && password != "" && url != "" && (enregistrable == 0 || enregistrable == 1)) {
+    if (ID != -1 && name != "" && log != "" && password != "" && url != "" && enregistrable != -1) {
         // If all the fields are completed and the camera can be recorded
         if (enregistrable == 1) {
             CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url));

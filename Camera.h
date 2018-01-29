@@ -34,6 +34,8 @@ public:
     string GetPassword() const;
 
     string GetUrl() const;
+    
+    void record();
 
 private:
     string directory;

@@ -38,7 +38,6 @@ OBJECTFILES= \
 	${OBJECTDIR}/Camera.o \
 	${OBJECTDIR}/CustomException.o \
 	${OBJECTDIR}/Manager.o \
-	${OBJECTDIR}/ManagerVideo.o \
 	${OBJECTDIR}/Utility.o \
 	${OBJECTDIR}/main.o
 
@@ -57,7 +56,7 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=-L/usr/local/include/opencv2 -L/usr/local/include/curl -Wl,-rpath,'/usr/local/include/opencv2' -Wl,-rpath,'/usr/local/include/curl' -lopencv_core -lopencv_highgui -lopencv_video
+LDLIBSOPTIONS=-L/usr/local/include/opencv2 -L/usr/local/include/curl -L/usr/local/include/sodium -Wl,-rpath,'/usr/local/include/opencv2' -Wl,-rpath,'/usr/local/include/curl' -Wl,-rpath,'/usr/local/include/sodium' -lopencv_core -lopencv_highgui -lopencv_video
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
@@ -70,32 +69,27 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/cppapplication_1: ${OBJECTFILES}
 ${OBJECTDIR}/Camera.o: Camera.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Camera.o Camera.cpp
+	$(COMPILE.cc) -g -Wall -I/usr/local/lib -I/usr/local/include/opencv2 -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Camera.o Camera.cpp
 
 ${OBJECTDIR}/CustomException.o: CustomException.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/CustomException.o CustomException.cpp
+	$(COMPILE.cc) -g -Wall -I/usr/local/lib -I/usr/local/include/opencv2 -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/CustomException.o CustomException.cpp
 
 ${OBJECTDIR}/Manager.o: Manager.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Manager.o Manager.cpp
-
-${OBJECTDIR}/ManagerVideo.o: ManagerVideo.cpp
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ManagerVideo.o ManagerVideo.cpp
+	$(COMPILE.cc) -g -Wall -I/usr/local/lib -I/usr/local/include/opencv2 -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Manager.o Manager.cpp
 
 ${OBJECTDIR}/Utility.o: Utility.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Utility.o Utility.cpp
+	$(COMPILE.cc) -g -Wall -I/usr/local/lib -I/usr/local/include/opencv2 -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Utility.o Utility.cpp
 
 ${OBJECTDIR}/main.o: main.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -Wall -I/usr/local/include/opencv2 -I/usr/local/lib -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
+	$(COMPILE.cc) -g -Wall -I/usr/local/lib -I/usr/local/include/opencv2 -I/usr/local/include/curl -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
 
 # Subprojects
 .build-subprojects:

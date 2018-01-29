@@ -7,7 +7,6 @@
       <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/Camera.h</itemPath>
       <itemPath>CustomException.h</itemPath>
       <itemPath>Manager.h</itemPath>
-      <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.h</itemPath>
       <itemPath>/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
@@ -20,7 +19,6 @@
       <itemPath>Camera.cpp</itemPath>
       <itemPath>CustomException.cpp</itemPath>
       <itemPath>Manager.cpp</itemPath>
-      <itemPath>ManagerVideo.cpp</itemPath>
       <itemPath>Utility.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
     </logicalFolder>
@@ -37,7 +35,7 @@
     <itemPath>Makefile</itemPath>
   </logicalFolder>
   <sourceRootList>
-    <Elem>../CppApplication_1/opencv2</Elem>
+    <Elem>.</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -51,8 +49,8 @@
         <ccTool>
           <standard>8</standard>
           <incDir>
-            <pElem>/usr/local/include/opencv2</pElem>
             <pElem>/usr/local/lib</pElem>
+            <pElem>/usr/local/include/opencv2</pElem>
             <pElem>/usr/local/include/curl</pElem>
           </incDir>
           <warningLevel>2</warningLevel>
@@ -62,10 +60,12 @@
           <linkerAddLib>
             <pElem>/usr/local/include/opencv2</pElem>
             <pElem>/usr/local/include/curl</pElem>
+            <pElem>/usr/local/include/sodium</pElem>
           </linkerAddLib>
           <linkerDynSerch>
             <pElem>/usr/local/include/opencv2</pElem>
             <pElem>/usr/local/include/curl</pElem>
+            <pElem>/usr/local/include/sodium</pElem>
           </linkerDynSerch>
           <linkerLibItems>
             <linkerLibLibItem>opencv_core</linkerLibLibItem>
@@ -75,11 +75,6 @@
         </linkerTool>
       </compileType>
       <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/Camera.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.h"
             ex="false"
             tool="3"
             flavor2="0">
@@ -100,11 +95,6 @@
       <item path="Manager.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Manager.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="ManagerVideo.cpp" ex="false" tool="1" flavor2="0">
-        <ccTool>
-          <warningLevel>2</warningLevel>
-        </ccTool>
       </item>
       <item path="Utility.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -136,11 +126,6 @@
             tool="3"
             flavor2="0">
       </item>
-      <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
       <item path="/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.h"
             ex="false"
             tool="3"
@@ -157,8 +142,6 @@
       <item path="Manager.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Manager.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="ManagerVideo.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Utility.cpp" ex="false" tool="1" flavor2="0">
       </item>

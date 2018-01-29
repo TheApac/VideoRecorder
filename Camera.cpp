@@ -28,67 +28,74 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
     this->log = log;
     this->password = password;
     this->url = url;
-    //createDirectoryVideos(this->directory);
-    //while (1) {
-    ////VideoCapture inputVideo("rtsp://" + this->url);
-    ////if (!inputVideo.isOpened()) {
-    ////     printf("Couldn't connect to camera\n");
-    //break;
-    //// }
-    ////const string NAME = "testRecordN01.avi";
-    //// int ex = static_cast<int> (inputVideo.get(CV_CAP_PROP_FOURCC));
-    ////     Size size = Size((int) inputVideo.get(CV_CAP_PROP_FRAME_WIDTH), // Acquire input size
-    ////            (int) inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT));
+}
 
-    ////    VideoWriter outputVideo; // Open the output
-    //outputVideo.open(NAME, CV_FOURCC('M','P','4','2'), inputVideo.get(CV_CAP_PROP_FPS), size, true);
-    //        if (!outputVideo.isOpened()) {
-    //            cout << "Could not open the output video for write: " << this->url << endl;
-    //            break;
-    //        }
-    ////        int fourcc = static_cast<int>(inputVideo.get(CV_CAP_PROP_FOURCC));
+void Camera::record() {
+    createDirectoryVideos("/home/Alexandre/testDirectory");
+    while (1) {
+        VideoCapture inputVideo("rtsp://"+this->log+":"+this->password+"@"+this->url);
+        if (!inputVideo.isOpened()) {
+            printf("Couldn't connect to camera\n");
+            break;
+        }
+        const string NAME = "testRecordN01.avi";
+        int ex = static_cast<int> (inputVideo.get(CV_CAP_PROP_FOURCC));
+        Size size = Size((int) inputVideo.get(CV_CAP_PROP_FRAME_WIDTH), // Acquire input size
+                (int) inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT));
 
-    ////    char FOURCC_STR[] = {
-    ////    (char)(fourcc & 0XFF)
-    ////    , (char)((fourcc & 0XFF00) >> 8)
-    ////    , (char)((fourcc & 0XFF0000) >> 16)
-    ////    , (char)((fourcc & 0XFF000000) >> 24)
-    ////    , 0
-    ////};
-    ////std::cout << "FOURCC is '" << FOURCC_STR << "'\n";
-    //        Mat src;
-    //        time_t t = time(0);
-    //        long int secondsToStop = time(&t) + 30;
-    //        while (time(&t) < secondsToStop) { //Show the image captured in the window and repeat
-    //            //inputVideo >> src; // read
-    //            //outputVideo.write(src);
-    //        }
-    //        outputVideo.release();
-    //        inputVideo.release();
-    //}
+        VideoWriter outputVideo; // Open the output
+        if (!outputVideo.isOpened()) {
+            cout << "Could not open the output video for write: " << this->url << endl;
+            break;
+        }
+        int fourcc = static_cast<int> (inputVideo.get(CV_CAP_PROP_FOURCC));
+        char FOURCC_STR[] = {
+            (char) (fourcc & 0XFF)
+            , (char) ((fourcc & 0XFF00) >> 8)
+            , (char) ((fourcc & 0XFF0000) >> 16)
+            , (char) ((fourcc & 0XFF000000) >> 24)
+            , 0
+        };
+        outputVideo.open(NAME, inputVideo.get(CV_CAP_PROP_FOURCC), inputVideo.get(CV_CAP_PROP_FPS), size, true);
+        Mat src;
+        time_t t = time(0);
+        long int secondsToStop = time(&t) + 30;
+        while (time(&t) < secondsToStop) { //Show the image captured in the window and repeat
+            inputVideo >> src; // read
+            outputVideo.write(src);
+        }
+        outputVideo.release();
+        inputVideo.release();
+    }
 }
 
 Camera::~Camera() {
 }
 
-string Camera::GetDirectory() const{
+string Camera::GetDirectory() const {
     return this->directory;
 }
-int Camera::GetID() const{
+
+int Camera::GetID() const {
     return this->ID;
 }
-string Camera::GetLog() const{
+
+string Camera::GetLog() const {
     return this->log;
 }
-string Camera::GetName() const{
+
+string Camera::GetName() const {
     return this->name;
 }
-int Camera::GetNbdays() const{
+
+int Camera::GetNbdays() const {
     return this->nbdays;
 }
-string Camera::GetPassword() const{
+
+string Camera::GetPassword() const {
     return this->password;
 }
-string Camera::GetUrl() const{
+
+string Camera::GetUrl() const {
     return this->url;
 }

@@ -38,7 +38,6 @@ OBJECTFILES= \
 	${OBJECTDIR}/Camera.o \
 	${OBJECTDIR}/CustomException.o \
 	${OBJECTDIR}/Manager.o \
-	${OBJECTDIR}/ManagerVideo.o \
 	${OBJECTDIR}/Utility.o \
 	${OBJECTDIR}/main.o
 
@@ -81,11 +80,6 @@ ${OBJECTDIR}/Manager.o: Manager.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Manager.o Manager.cpp
-
-${OBJECTDIR}/ManagerVideo.o: ManagerVideo.cpp
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ManagerVideo.o ManagerVideo.cpp
 
 ${OBJECTDIR}/Utility.o: Utility.cpp
 	${MKDIR} -p ${OBJECTDIR}
