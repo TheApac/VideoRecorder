@@ -36,16 +36,16 @@ public:
     string GetUrl() const;
 
     void record();
-    
+
     string getFileName();
 private:
-    string directory;
-    int nbdays;
-    int ID;
-    string name;
-    string log;
-    string password;
-    string url;
+    string directory;   /* Directory where records will be saved */
+    int nbdays;         /* Positive integer \n\n Number of days to keep the records */
+    int ID;             /* Positive integer \n\n ID of the camera */
+    string name;        /* Name of the camera */
+    string url;         /* URL of the rtsp */
+    string log;         /* Log for the rtsp */
+    string password;    /* Password for the rtsp */
 };
 
 #endif /* CAMERA_H */

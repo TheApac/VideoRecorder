@@ -32,21 +32,20 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
 }
 
 void Camera::record() {
-    createDirectoryVideos("/home/Alexandre/testDirectory");
+    createDirectoryVideos(this->directory);
     while (1) {
-        VideoCapture inputVideo("rtsp://" + this->log + ":" + this->password + "@" + this->url);
+        VideoCapture inputVideo("rtsp://" + this->log + ":" + this->password + "@" + this->url); //open the stream with the identification
         if (!inputVideo.isOpened()) {
             printf("Couldn't connect to camera\n");
             break;
         }
-        const string NAME = this->getFileName();
-        Size size = Size((int) inputVideo.get(CV_CAP_PROP_FRAME_WIDTH), // Acquire input size
-                (int) inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT));
+        Size size = Size((int) inputVideo.get(CV_CAP_PROP_FRAME_WIDTH), (int) inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT)); // Acquire input size
         VideoWriter outputVideo; // Open the output
         if (!outputVideo.isOpened()) {
-            cout << "Could not open the output video to write: " << this->url << endl;
+            cerr << "Could not open the output video to write: " << this->url << endl;
             break;
         }
+        /* To keep during testing */
         int fourcc = static_cast<int> (inputVideo.get(CV_CAP_PROP_FOURCC));
         char FOURCC_STR[] = {
             (char) (fourcc & 0XFF)
@@ -55,16 +54,18 @@ void Camera::record() {
             , (char) ((fourcc & 0XFF000000) >> 24)
             , 0
         };
-        outputVideo.open(NAME, inputVideo.get(CV_CAP_PROP_FOURCC), inputVideo.get(CV_CAP_PROP_FPS), size, true);
-        Mat src;
+        // cout << FOURCC_STR[0]<< FOURCC_STR[1]<< FOURCC_STR[2]<< FOURCC_STR[3] << endl;
+        /* ---------------------- */
+        outputVideo.open(this->getFileName(), inputVideo.get(CV_CAP_PROP_FOURCC), inputVideo.get(CV_CAP_PROP_FPS), size, true); //create an output file
+        Mat src; // Image type
         time_t t = time(0);
         long int secondsToStop = time(&t) + 30;
-        while (time(&t) < secondsToStop) { //Show the image captured in the window and repeat
-            inputVideo >> src; // read
-            outputVideo.write(src);
+        while (time(&t) < secondsToStop) { // Loop while the file is not at its max time
+            inputVideo >> src; // read an image
+            outputVideo.write(src); // write it in the output file
         }
-        outputVideo.release();
-        inputVideo.release();
+        outputVideo.release(); // close the output writer
+        inputVideo.release(); // close the video reader
     }
 }
 
@@ -103,44 +104,44 @@ string Camera::getFileName() {
     const boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time();
     // Get the time offset in current day
     const boost::posix_time::time_duration td = now.time_of_day();
-    const long hours = td.hours();
-    const long minutes = td.minutes();
-    const long seconds = td.seconds();
-    const long milliseconds = td.total_milliseconds() -((hours * 3600 + minutes * 60 + seconds) * 1000);
-    tm t = to_tm(now);
-    string test = "C" + to_string(this->ID) + "-" + to_string(t.tm_year + 1900);
-    if (t.tm_mon + 1 < 10) {
-        test += "0" + to_string(t.tm_mon + 1);
+    const long hours = td.hours(); // Current hour
+    const long minutes = td.minutes(); // Current minute
+    const long seconds = td.seconds(); // Current seconds
+    const long milliseconds = td.total_milliseconds() -((hours * 3600 + minutes * 60 + seconds) * 1000); // Convert number of seconds since midnight to current milliseconds
+    tm date = to_tm(now); // Struct for the date
+    string FileName = "C" + to_string(this->ID) + "-" + to_string(date.tm_year + 1900);
+    if (date.tm_mon + 1 < 10) { // if month between 1 and 9, add a 0 in front of it
+        FileName += "0" + to_string(date.tm_mon + 1);
     } else {
-        test += to_string(t.tm_mon + 1);
+        FileName += to_string(date.tm_mon + 1);
     }
-    if (t.tm_mday < 10) {
-        test += "0" + to_string(t.tm_mday);
+    if (date.tm_mday < 10) { // if day between 1 and 9, add a 0 in front of it
+        FileName += "0" + to_string(date.tm_mday);
     } else {
-        test += to_string(t.tm_mday);
+        FileName += to_string(date.tm_mday);
     }
-    test += "-";
-    if (hours < 10) {
-        test += "0" + to_string(hours);
+    FileName += "-"; // separate Date and Hour in the file name
+    if (hours < 10) { // if hour between 1 and 9, add a 0 in front of it
+        FileName += "0" + to_string(hours);
     } else {
-        test += to_string(hours);
+        FileName += to_string(hours);
     }
-    if (minutes < 10) {
-        test += "0" + to_string(minutes);
+    if (minutes < 10) { // if minute between 1 and 9, add a 0 in front of it
+        FileName += "0" + to_string(minutes);
     } else {
-        test += to_string(minutes);
+        FileName += to_string(minutes);
     }
-    if (seconds < 10) {
-        test += "0" + to_string(seconds);
+    if (seconds < 10) { // if seconds between 1 and 9, add a 0 in front of it
+        FileName += "0" + to_string(seconds);
     } else {
-        test += to_string(seconds);
+        FileName += to_string(seconds);
     }
-    if (milliseconds < 10) {
-        test += "00" + to_string(milliseconds);
-    } else if (milliseconds < 100) {
-        test += "0" + to_string(milliseconds);
+    if (milliseconds < 10) { // if milliseconds between 1 and 9, add two 0 in front of it
+        FileName += "00" + to_string(milliseconds);
+    } else if (milliseconds < 100) { // if milliseconds between 10 and 99, add a 0 in front of it
+        FileName += "0" + to_string(milliseconds);
     } else {
-        test += to_string(milliseconds);
+        FileName += to_string(milliseconds);
     }
-    return test + ".mp4";
+    return FileName + ".mp4"; //add the extension
 }

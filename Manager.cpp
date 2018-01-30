@@ -119,16 +119,20 @@ Manager::Manager(string ConfigFile) {
         CameraOver(enregistrable); // check for the last camera of the file
         cout << "Number of valid cameras : " << CameraList.size() << endl;
     } catch (CustomException &e) {
+        // If an error is thrown, print it on the terminal
         cerr << e.what() << " on line : " << nbLinesRead << endl; // If any error is encountered, display the error and the line
         string error = "Error in config file given as parameter for the Manager\n"
                 "The file : " + ConfigFile + " returned an " + string(e.what()) + " on line " + to_string(nbLinesRead) + "\n\n";
         if (location != "") {
+            // If location is defined, add it as detail in the email
             error += "Concerned site : " + location + "\n";
         } else {
+            // Else add the hostname of the server
             char hostname[128] = "";
             gethostname(hostname, sizeof (hostname));
             error += "Hostname of server : " + string(hostname) + "\n";
         }
+        // And send it by email
         sendEmail(error);
         // Quit the constructor
         exit(EXIT_FAILURE);
@@ -150,6 +154,7 @@ void Manager::CameraOver(int &enregistrable) {
         if (enregistrable == 1) {
             CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url));
         }
+        // Reset all fields
         ID = -1;
         name = "";
         log = "";

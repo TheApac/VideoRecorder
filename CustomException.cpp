@@ -30,13 +30,7 @@ UndefinedField::UndefinedField(std::string const &msg) : CustomException("Undefi
 InvalidID::InvalidID(std::string const &msg) : CustomException("Invalid id : " + msg + " should be a positive integer") {
 }
 
-InvalidPath::InvalidPath(std::string const &msg) : CustomException("Invalid path : " + msg) {
-}
-
 InvalidNbDays::InvalidNbDays(std::string const &msg) : CustomException("Invalid number of days : " + msg + " should be a positive integer") {
-}
-
-InvalidURL::InvalidURL(std::string const &msg) : CustomException("Invalid url format : " + msg) {
 }
 
 DuplicateField::DuplicateField(std::string const &msg) : CustomException("Field duplicated : " + msg) {

@@ -25,7 +25,8 @@ public:
     virtual ~Manager();
 private:
     void CameraOver(int &enregistrable);
-    vector<Camera*> CameraList;
+    vector<Camera*> CameraList; /* Save each camera in a vector to run their record function after they all have been initialized */
+    // Keep the value of the camera fields while creating them
     int nbdays;
     string path;
     string name;

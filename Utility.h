@@ -16,7 +16,6 @@
 
 #define FROM_ADDR    "<no-reply@2n-tech.com>"
 #define TO_ADDR      "<a.cuevas@2n-tech.com>"
-#define DATE_MAIL ""
 #define FROM_MAIL "2N Technologies" FROM_ADDR
 #define TO_MAIL   "Notified person " TO_ADDR
 
@@ -28,14 +27,14 @@ struct upload_status {
     int lines_read;
 };
 
-bool isOnlyNumeric(string &str);
-int sendEmail(string messageContent);
-static string defineDate();
-void deamonize();
-void createDirectoryVideos(string rootDirectory);
-static int timeSinceDate(string dateToCompare);
-static void removeContentOfDirectory(string path, bool exact);
-int removeOldFile(int nbDays, string path);
+bool isOnlyNumeric(string &str); // Return true if the string represent a positive integer, else return false
+int sendEmail(string messageContent);   // send an email containing the parameter
+static string defineDate(); // Retuen the date on the format of the email parameter
+void deamonize(); // Self explaining
+void createDirectoryVideos(string rootDirectory); // Create a subdirectory (and the directory if not existent) where records will be stored
+static int timeSinceDate(string dateToCompare); // return the number of days since a date
+static void removeContentOfDirectory(string path, bool exact); // remove every files in a directory (recursive)
+int removeOldFile(int nbDays, string path); // remove the files that are older than the maximum time to keep
 
 #endif /* UTILITY_H */
 
