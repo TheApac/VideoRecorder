@@ -18,8 +18,10 @@
 #include <fstream>
 #include <regex>
 #include <unistd.h>
+#include <signal.h>
 
 Manager::Manager(string ConfigFile) {
+    //deamonize();
     name = "", log = "", password = "", url = "", path = "";
     ID = -1;
     nbdays = -1;
@@ -132,8 +134,12 @@ Manager::Manager(string ConfigFile) {
         exit(EXIT_FAILURE);
     }
     for (Camera *camera : CameraList) {
-        cout << camera->GetName() << endl; //TODO supprimer cette ligne
-        //camera->Record
+        pid_t pid = fork();
+        if (pid != 0) {
+            cout << camera->getFileName() << endl; //TODO supprimer cette ligne
+            //camera->Record
+            exit(0);
+        }
         sleep(5);
     }
 }

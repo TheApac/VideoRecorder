@@ -52,6 +52,7 @@
             <pElem>/usr/local/lib</pElem>
             <pElem>/usr/local/include/opencv2</pElem>
             <pElem>/usr/local/include/curl</pElem>
+            <pElem>/usr/local/include/boost</pElem>
           </incDir>
           <warningLevel>2</warningLevel>
         </ccTool>
@@ -61,11 +62,13 @@
             <pElem>/usr/local/include/opencv2</pElem>
             <pElem>/usr/local/include/curl</pElem>
             <pElem>/usr/local/include/sodium</pElem>
+            <pElem>/usr/local/include/boost</pElem>
           </linkerAddLib>
           <linkerDynSerch>
             <pElem>/usr/local/include/opencv2</pElem>
             <pElem>/usr/local/include/curl</pElem>
             <pElem>/usr/local/include/sodium</pElem>
+            <pElem>/usr/local/include/boost</pElem>
           </linkerDynSerch>
           <linkerLibItems>
             <linkerLibLibItem>opencv_core</linkerLibLibItem>

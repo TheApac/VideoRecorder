@@ -34,15 +34,16 @@ public:
     string GetPassword() const;
 
     string GetUrl() const;
-    
-    void record();
 
+    void record();
+    
+    string getFileName();
 private:
     string directory;
     int nbdays;
     int ID;
     string name;
-    string log; 
+    string log;
     string password;
     string url;
 };

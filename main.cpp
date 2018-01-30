@@ -13,22 +13,16 @@
 #include "Utility.h"
 #include "Manager.h"
 #include <iostream>
-#ifdef __cplusplus
 extern "C" {
-#endif
 #include <sodium.h>
-#ifdef __cplusplus
 }
-#endif
 using namespace std;
 
 int main(int argc, char** argv) {
-    //Manager *manager = new Manager(string("/home/Alexandre/Téléchargements/cameras.ini"));
-    //if (manager != nullptr) {
-    //printf("Manager created\n");
-    //}
-    //sendEmail("test");
-    //manager->~Manager();
+    Manager *manager = new Manager(string("/home/Alexandre/Téléchargements/cameras.ini"));
+    if (manager != nullptr) {
+        printf("Manager created\n");
+    }
     if (sodium_init() == -1) {
         cout << "Erreur libsodium" << endl;
     } else {
