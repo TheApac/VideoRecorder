@@ -19,9 +19,10 @@
 #include "Camera.h"
 
 using namespace std;
+
 class Manager {
 public:
-    Manager(string ConfigFile);
+    Manager();
     virtual ~Manager();
 private:
     void CameraOver(int &enregistrable);

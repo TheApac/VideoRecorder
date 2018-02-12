@@ -41,3 +41,9 @@ InvalidLine::InvalidLine(std::string const &msg) : CustomException("Invalid line
 
 EmptyLine::EmptyLine(std::string const &msg) : CustomException("Empty line in config file : " + msg) {
 }
+
+FileNotFound::FileNotFound(std::string const &msg) : CustomException("File not found : " + msg) {
+}
+
+InvalidSMTP::InvalidSMTP(std::string const &msg) : CustomException("The configuration for the SMTP on the server : ") {
+}

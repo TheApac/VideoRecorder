@@ -58,6 +58,15 @@ public:
     EmptyLine(std::string const& msg); /* Exception to throw when an empty line is encountered in the configuration file */
 };
 
+class FileNotFound : public CustomException {
+public:
+    FileNotFound(std::string const& msg); /* Exception to throw when one of the configuration files is not found */
+};
+
+class InvalidSMTP : public CustomException {
+public:
+    InvalidSMTP(std::string const& msg); /* Exception to throw when one of the configuration files is not found */
+};
 
 #endif /* CUSTOMEXCEPTION_H */
 

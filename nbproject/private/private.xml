@@ -10,16 +10,13 @@
             <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/Manager.h</file>
             <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/Manager.cpp</file>
             <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.h</file>
-            <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/curl/curl.h</file>
             <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/CustomException.h</file>
             <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/main.cpp</file>
-            <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.cpp</file>
-            <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.h</file>
             <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/CustomException.cpp</file>
+            <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/Utility.cpp</file>
             <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/Camera.h</file>
             <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/Makefile</file>
             <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/Camera.cpp</file>
-            <file>file:/home/Alexandre/NetBeansProjects/VideoRecorder/ManagerVideo.cpp</file>
         </group>
     </open-files>
 </project-private>

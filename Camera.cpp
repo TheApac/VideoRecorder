@@ -33,6 +33,7 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
 
 void Camera::record() {
     createDirectoryVideos(this->directory);
+    // REMOVE OLD FILES
     while (1) {
         VideoCapture inputVideo("rtsp://" + this->log + ":" + this->password + "@" + this->url); //open the stream with the identification
         if (!inputVideo.isOpened()) {
@@ -59,7 +60,7 @@ void Camera::record() {
         outputVideo.open(this->getFileName(), inputVideo.get(CV_CAP_PROP_FOURCC), inputVideo.get(CV_CAP_PROP_FPS), size, true); //create an output file
         Mat src; // Image type
         time_t t = time(0);
-        long int secondsToStop = time(&t) + 30;
+        long int secondsToStop = time(&t) + 60 * 15;
         while (time(&t) < secondsToStop) { // Loop while the file is not at its max time
             inputVideo >> src; // read an image
             outputVideo.write(src); // write it in the output file

@@ -10,12 +10,19 @@
 #include <cstring>
 #include <time.h>
 #include <string>
+#include <fstream>
 #include "Utility.h"
+#include "CustomException.h"
 #include <curl/curl.h>
+#include <iostream>
+#include <pwd.h>
 
 using namespace std;
 
-string mailContent="";
+string mailContent = "";
+string loginSMTP = "";
+string passwordSMTP = "";
+string urlSMTP = "";
 
 bool isOnlyNumeric(string &str) {
     for (int positionChar = 0; positionChar < str.size() - 1; ++positionChar) { // iterate through the string
@@ -127,16 +134,16 @@ int sendEmail(string messageContent) {
     CURLcode res = CURLE_OK;
     struct curl_slist *recipients = NULL;
     struct upload_status upload_ctx;
-    
+
     upload_ctx.lines_read = 0;
 
     curl = curl_easy_init();
     if (curl) {
-        mailContent = messageContent+"Time of error : "+defineDate().substr(6);
+        mailContent = messageContent + "Time of error : " + defineDate().substr(6);
         /* This is the configuration of the mailserver */
-        curl_easy_setopt(curl, CURLOPT_USERNAME, "no-reply@2n-tech.com");
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, "hnO4vbpl54pw0PIQ"); // TODO encryption
-        curl_easy_setopt(curl, CURLOPT_URL, "smtp://ssl0.ovh.net");
+        curl_easy_setopt(curl, CURLOPT_USERNAME, loginSMTP.c_str());
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, passwordSMTP.c_str()); // TODO encryption
+        curl_easy_setopt(curl, CURLOPT_URL, urlSMTP.c_str());
 
         curl_easy_setopt(curl, CURLOPT_MAIL_FROM, FROM_ADDR);
         /* Add recipient, in this particular case they correspond to the
@@ -283,4 +290,47 @@ int removeOldFile(int nbDays, string path) {
         perror("Could not open the directory");
         return EXIT_FAILURE;
     }
+}
+
+int configureSMTP() {
+    struct passwd *pw = getpwuid(getuid());
+    ifstream file(string(pw->pw_dir)+"/.VideoRecorder/2NWatchDog.ini");
+    if (!file.is_open()) {
+        cerr << "~/.VideoRecorder/2NWatchDog.ini was not found" << endl;
+    }
+    string line;
+    while (getline(file, line) && (urlSMTP == "" || loginSMTP == "" || passwordSMTP == "")) {
+        if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
+            string parameterName = line.substr(0, line.find_first_of("="));
+            if (parameterName == "serveur_smtp") {
+                urlSMTP = line.substr(line.find_first_of("=") + 1);
+            } else if (parameterName == "login_smtp") {
+                loginSMTP = line.substr(line.find_first_of("=") + 1);
+            } else if (parameterName == "mdp_smtp") {
+                passwordSMTP = line.substr(line.find_first_of("=") + 1);
+            }
+        }
+    }
+    bool error = false;
+    if (urlSMTP == "") {
+        cerr << "No SMTP url specified" << endl;
+        error = true;
+    }
+    if (loginSMTP == "") {
+        cerr << "No SMTP login specified" << endl;
+        error = true;
+    }
+    if (passwordSMTP == "") {
+        cerr << "No SMTP password specified" << endl;
+        error = true;
+    }
+    if (error) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+bool fileExists(const string& name) {
+    struct stat buffer;
+    return (stat(name.c_str(), &buffer) == 0);
 }

@@ -19,17 +19,22 @@
 #include <regex>
 #include <unistd.h>
 #include <signal.h>
+#include <pwd.h>
 
-Manager::Manager(string ConfigFile) {
+Manager::Manager() {
     //deamonize();
+    struct passwd *pw = getpwuid(getuid());
     name = "", log = "", password = "", url = "", path = "";
     ID = -1;
     nbdays = -1;
-    bool firstCamera = true;
+    bool firstCamera = true; // Prevent a bug for the start of the first camera
     string location = "";
     int enregistrable = -1;
-    int nbLinesRead = 0;
-    ifstream file(ConfigFile);
+    int nbLinesRead = 0; // Keep the number of the current line to send it as detail if an error is encountered
+    ifstream file(string(pw->pw_dir)+"/.VideoRecorder/cameras.ini");
+    if (!file.is_open()) {
+        throw FileNotFound(string(pw->pw_dir)+"/.VideoRecorder/cameras.ini");
+    }
     string line;
     regex ChangeCam("^\\[CAMERA");
     try {
@@ -122,7 +127,7 @@ Manager::Manager(string ConfigFile) {
         // If an error is thrown, print it on the terminal
         cerr << e.what() << " on line : " << nbLinesRead << endl; // If any error is encountered, display the error and the line
         string error = "Error in config file given as parameter for the Manager\n"
-                "The file : " + ConfigFile + " returned an " + string(e.what()) + " on line " + to_string(nbLinesRead) + "\n\n";
+                "The file : " + string(pw->pw_dir)+"/.VideoRecorder/cameras.ini" + " returned an " + string(e.what()) + " on line " + to_string(nbLinesRead) + "\n\n";
         if (location != "") {
             // If location is defined, add it as detail in the email
             error += "Concerned site : " + location + "\n";
@@ -133,7 +138,7 @@ Manager::Manager(string ConfigFile) {
             error += "Hostname of server : " + string(hostname) + "\n";
         }
         // And send it by email
-        sendEmail(error);
+        //sendEmail(error);
         // Quit the constructor
         exit(EXIT_FAILURE);
     }

@@ -35,6 +35,7 @@ void createDirectoryVideos(string rootDirectory); // Create a subdirectory (and 
 static int timeSinceDate(string dateToCompare); // return the number of days since a date
 static void removeContentOfDirectory(string path, bool exact); // remove every files in a directory (recursive)
 int removeOldFile(int nbDays, string path); // remove the files that are older than the maximum time to keep
-
+int configureSMTP();
+bool fileExists (const string& name);
 #endif /* UTILITY_H */
 
