@@ -4,16 +4,17 @@
  * and open the template in the editor.
  */
 
-/* 
+/*
  * File:   Manager.cpp
  * Author: Alexandre
- * 
+ *
  * Created on 24 janvier 2018, 14:27
  */
 
 #include "Manager.h"
 #include "CustomException.h"
 #include "Utility.h"
+#include "Watchdog.h"
 #include <iostream>
 #include <fstream>
 #include <regex>
@@ -22,7 +23,10 @@
 #include <pwd.h>
 
 Manager::Manager() {
-    //deamonize();
+    deamonize();
+    if (isRunningManager()) {
+        exit(0);
+    }
     struct passwd *pw = getpwuid(getuid());
     name = "", log = "", password = "", url = "", path = "";
     ID = -1;
@@ -31,9 +35,10 @@ Manager::Manager() {
     string location = "";
     int enregistrable = -1;
     int nbLinesRead = 0; // Keep the number of the current line to send it as detail if an error is encountered
-    ifstream file(string(pw->pw_dir)+"/.VideoRecorder/cameras.ini");
+
+    ifstream file(string(pw->pw_dir) + "/.VideoRecorder/cameras.ini");
     if (!file.is_open()) {
-        throw FileNotFound(string(pw->pw_dir)+"/.VideoRecorder/cameras.ini");
+        throw FileNotFound(string(pw->pw_dir) + "/.VideoRecorder/cameras.ini");
     }
     string line;
     regex ChangeCam("^\\[CAMERA");
@@ -122,12 +127,11 @@ Manager::Manager() {
             }
         }
         CameraOver(enregistrable); // check for the last camera of the file
-        cout << "Number of valid cameras : " << CameraList.size() << endl;
     } catch (CustomException &e) {
         // If an error is thrown, print it on the terminal
         cerr << e.what() << " on line : " << nbLinesRead << endl; // If any error is encountered, display the error and the line
         string error = "Error in config file given as parameter for the Manager\n"
-                "The file : " + string(pw->pw_dir)+"/.VideoRecorder/cameras.ini" + " returned an " + string(e.what()) + " on line " + to_string(nbLinesRead) + "\n\n";
+                "The file : " + string(pw->pw_dir) + "/.VideoRecorder/cameras.ini" + " returned an " + string(e.what()) + " on line " + to_string(nbLinesRead) + "\n\n";
         if (location != "") {
             // If location is defined, add it as detail in the email
             error += "Concerned site : " + location + "\n";
@@ -138,18 +142,9 @@ Manager::Manager() {
             error += "Hostname of server : " + string(hostname) + "\n";
         }
         // And send it by email
-        //sendEmail(error);
+        sendEmail(error);
         // Quit the constructor
         exit(EXIT_FAILURE);
-    }
-    for (Camera *camera : CameraList) {
-        pid_t pid = fork();
-        if (pid != 0) {
-            cout << camera->getFileName() << endl; //TODO supprimer cette ligne
-            //camera->Record
-            exit(0);
-        }
-        sleep(5);
     }
 }
 
@@ -185,4 +180,43 @@ void Manager::CameraOver(int &enregistrable) {
 }
 
 Manager::~Manager() {
+    struct passwd *pw = getpwuid(getuid());
+    string toRemove = string(pw->pw_dir) + "/.RunningVideoRecorder";
+    remove(toRemove.c_str());
+}
+
+void Manager::run() {
+    deamonize();
+    for (Camera *camera : CameraList) {
+        pid_t pid = fork();
+        if (pid == 0) {
+            //camera->record();
+        }
+    }
+    struct passwd *pw = getpwuid(getuid());
+    string file = string(pw->pw_dir) + "/.RunningVideoRecorder";
+    while (1) {
+        for (Camera *camera : CameraList) {
+            if (camera == nullptr) {
+                exit(0);
+                //TODO Ajout erreur
+            }
+        }
+        remove(file.c_str());
+        ofstream runfile(file);
+        runfile << currentDate() << endl;
+        runfile.close();
+        sleep(30);
+    }
+}
+
+bool Manager::isRunningManager() {
+    struct passwd *pw = getpwuid(getuid());
+    //ifstream filerun(string(pw->pw_dir) + "/.RunningVideoRecorder");
+    ifstream filerun("/home/Alexandre/.RunningVideoRecorder");
+    if (filerun.is_open()) {
+        filerun.close();
+        return true;
+    }
+    return false;
 }

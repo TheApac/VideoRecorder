@@ -32,42 +32,52 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
 }
 
 void Camera::record() {
-    createDirectoryVideos(this->directory);
-    // REMOVE OLD FILES
-    while (1) {
-        VideoCapture inputVideo("rtsp://" + this->log + ":" + this->password + "@" + this->url); //open the stream with the identification
-        if (!inputVideo.isOpened()) {
-            printf("Couldn't connect to camera\n");
-            break;
-        }
-        Size size = Size((int) inputVideo.get(CV_CAP_PROP_FRAME_WIDTH), (int) inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT)); // Acquire input size
-        VideoWriter outputVideo; // Open the output
-        if (!outputVideo.isOpened()) {
-            cerr << "Could not open the output video to write: " << this->url << endl;
-            break;
-        }
-        /* To keep during testing */
-        int fourcc = static_cast<int> (inputVideo.get(CV_CAP_PROP_FOURCC));
-        char FOURCC_STR[] = {
-            (char) (fourcc & 0XFF)
-            , (char) ((fourcc & 0XFF00) >> 8)
-            , (char) ((fourcc & 0XFF0000) >> 16)
-            , (char) ((fourcc & 0XFF000000) >> 24)
-            , 0
-        };
-        // cout << FOURCC_STR[0]<< FOURCC_STR[1]<< FOURCC_STR[2]<< FOURCC_STR[3] << endl;
-        /* ---------------------- */
-        outputVideo.open(this->getFileName(), inputVideo.get(CV_CAP_PROP_FOURCC), inputVideo.get(CV_CAP_PROP_FPS), size, true); //create an output file
-        Mat src; // Image type
+//    createDirectoryVideos(this->directory);
+//    // REMOVE OLD FILES
+//    while (1) {
+//        VideoCapture inputVideo("rtsp://" + this->log + ":" + this->password + "@" + this->url); //open the stream with the identification
+//        if (!inputVideo.isOpened()) {
+//            printf("Couldn't connect to camera\n");
+//            break;
+//        }
+//        Size size = Size((int) inputVideo.get(CV_CAP_PROP_FRAME_WIDTH), (int) inputVideo.get(CV_CAP_PROP_FRAME_HEIGHT)); // Acquire input size
+//        VideoWriter outputVideo; // Open the output
+//        if (!outputVideo.isOpened()) {
+//            cerr << "Could not open the output video to write: " << this->url << endl;
+//            break;
+//        }
+//        /* To keep during testing */
+//        int fourcc = static_cast<int> (inputVideo.get(CV_CAP_PROP_FOURCC));
+//        char FOURCC_STR[] = {
+//            (char) (fourcc & 0XFF)
+//            , (char) ((fourcc & 0XFF00) >> 8)
+//            , (char) ((fourcc & 0XFF0000) >> 16)
+//            , (char) ((fourcc & 0XFF000000) >> 24)
+//            , 0
+//        };
+//        // cout << FOURCC_STR[0]<< FOURCC_STR[1]<< FOURCC_STR[2]<< FOURCC_STR[3] << endl;
+//        /* ---------------------- */
+//        outputVideo.open(this->getFileName(), inputVideo.get(CV_CAP_PROP_FOURCC), inputVideo.get(CV_CAP_PROP_FPS), size, true); //create an output file
+//        Mat src; // Image type
         time_t t = time(0);
         long int secondsToStop = time(&t) + 60 * 15;
+        bool recordNext = false;
         while (time(&t) < secondsToStop) { // Loop while the file is not at its max time
-            inputVideo >> src; // read an image
-            outputVideo.write(src); // write it in the output file
+            //inputVideo >> src; // read an image
+            //outputVideo.write(src); // write it in the output file
+            if (time(&t) + 15 == secondsToStop) {
+                pid_t pid = fork();
+                if (pid == 0 && !recordNext) {
+                    deamonize();
+                    this->record();
+                } else if (pid != 0) {
+                    recordNext = true;
+                }
+            }
         }
-        outputVideo.release(); // close the output writer
-        inputVideo.release(); // close the video reader
-    }
+//        outputVideo.release(); // close the output writer
+//        inputVideo.release(); // close the video reader
+//    }
 }
 
 Camera::~Camera() {

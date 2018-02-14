@@ -23,6 +23,8 @@ using namespace std;
 class Manager {
 public:
     Manager();
+    void run();
+    static bool isRunningManager();
     virtual ~Manager();
 private:
     void CameraOver(int &enregistrable);

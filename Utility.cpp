@@ -231,6 +231,22 @@ static int timeSinceDate(string dateToCompare) {
     return difference;
 }
 
+int secondsSinceDate(string dateToCompare) {
+    // Calculate the number of seconds ellapsed since a date formated as "YYYY:MM:DD"
+    time_t rawtime;
+    struct tm* timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime); // create a time structure
+    timeinfo->tm_year = atoi(dateToCompare.substr(0, 4).c_str()) - 1900;
+    timeinfo->tm_mon = atoi(dateToCompare.substr(5, 7).c_str()) - 1;
+    timeinfo->tm_mday = atoi(dateToCompare.substr(8).c_str());
+    time_t x = mktime(timeinfo); // create a time_t struct from the timeinfo
+    time_t raw_time = time(NULL); // create a time_t struct with current time
+    time_t y = mktime(localtime(&raw_time));
+    double difference = difftime(y, x) / (60 * 60 * 24); // calculate the number of ms between two dates, convert it in days
+    return difference;
+}
+
 static void removeContentOfDirectory(string path, bool exact) {
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
@@ -294,7 +310,7 @@ int removeOldFile(int nbDays, string path) {
 
 int configureSMTP() {
     struct passwd *pw = getpwuid(getuid());
-    ifstream file(string(pw->pw_dir)+"/.VideoRecorder/2NWatchDog.ini");
+    ifstream file(string(pw->pw_dir) + "/.VideoRecorder/2NWatchDog.ini");
     if (!file.is_open()) {
         cerr << "~/.VideoRecorder/2NWatchDog.ini was not found" << endl;
     }
@@ -303,11 +319,14 @@ int configureSMTP() {
         if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
             string parameterName = line.substr(0, line.find_first_of("="));
             if (parameterName == "serveur_smtp") {
-                urlSMTP = line.substr(line.find_first_of("=") + 1);
+                urlSMTP = "smtp://" + string(line.substr(line.find_first_of("=") + 1));
+                urlSMTP = urlSMTP.substr(0, urlSMTP.size() - 1);
             } else if (parameterName == "login_smtp") {
                 loginSMTP = line.substr(line.find_first_of("=") + 1);
+                loginSMTP = loginSMTP.substr(0, loginSMTP.size() - 1);
             } else if (parameterName == "mdp_smtp") {
                 passwordSMTP = line.substr(line.find_first_of("=") + 1);
+                passwordSMTP = passwordSMTP.substr(0, passwordSMTP.size() - 1);
             }
         }
     }
@@ -333,4 +352,30 @@ int configureSMTP() {
 bool fileExists(const string& name) {
     struct stat buffer;
     return (stat(name.c_str(), &buffer) == 0);
+}
+
+string currentDate() {
+    time_t t = time(0); // get time now
+    struct tm * now = localtime(& t); //get local time
+    string date = (now->tm_year + 1900) + ":";
+    if (now->tm_mon + 1 < 10) {
+        date += "0";
+    }
+    date += now->tm_mon + 1 + ":";
+    if (now->tm_mday < 10) {
+        date += "0";
+    }
+    date += now->tm_mday + ":";
+    if (now->tm_hour + 1 < 10) {
+        date += "0";
+    }
+    date += now->tm_hour + 1 + ":";
+    if (now->tm_min < 10) {
+        date += "0";
+    }
+    date += now->tm_min + ":";
+    if (now->tm_sec < 10) {
+        date += "0";
+    }
+    date += now->tm_sec + ":";
 }

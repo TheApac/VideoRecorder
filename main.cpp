@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-/* 
+/*
  * File:   main.cpp
  * Author: Alexandre
  *
@@ -13,25 +13,33 @@
 #include "Utility.h"
 #include "Manager.h"
 #include "CustomException.h"
+#include "Watchdog.h"
 #include <iostream>
 extern "C" {
 #include <sodium.h>
 }
 #include <unistd.h>
 #include <signal.h>
+#include <pwd.h>
 
 using namespace std;
 
 int main() {
+    struct passwd *pw = getpwuid(getuid());
+    string toRemove = string(pw->pw_dir) + "/.RunningVideoRecorder";
+    remove(toRemove.c_str());
     int error = configureSMTP();
     if (error == EXIT_FAILURE) {
         cerr << "Config for SMTP is erroneous" << endl;
         exit(EXIT_FAILURE);
     }
     try {
-        Manager *manager = new Manager();
-        if (manager != nullptr) {
-            printf("Manager created\n");
+        pid_t pid = fork();
+        if (pid == 0) {
+            //Manager *manager = new Manager();
+            //manager->run();
+        } else {
+            Watchdog *watchdog = new Watchdog();
         }
     } catch (CustomException &e) {
         cerr << e.what() << endl;
@@ -41,10 +49,5 @@ int main() {
         error += string(hostname) + "\n";
         sendEmail(error);
         exit(EXIT_FAILURE);
-    }
-    if (sodium_init() == -1) {
-        cout << "Erreur libsodium" << endl;
-    } else {
-        cout << "Libsodium ok" << endl;
     }
 }

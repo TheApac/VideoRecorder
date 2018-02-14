@@ -26,6 +26,7 @@ all: $(TARGETDIR_VideoRecorder)/VideoRecorder
 ## Target: VideoRecorder
 OBJS_VideoRecorder =  \
 	$(TARGETDIR_VideoRecorder)/main.o \
+	$(TARGETDIR_VideoRecorder)/Watchdog.o \
 	$(TARGETDIR_VideoRecorder)/Camera.o \
 	$(TARGETDIR_VideoRecorder)/CustomException.o \
 	$(TARGETDIR_VideoRecorder)/Utility.o \
@@ -43,6 +44,9 @@ $(TARGETDIR_VideoRecorder)/VideoRecorder: $(TARGETDIR_VideoRecorder) $(OBJS_Vide
 # Compile source files into .o files
 $(TARGETDIR_VideoRecorder)/main.o: $(TARGETDIR_VideoRecorder) main.cpp
 	$(COMPILE.cc) $(CCFLAGS_VideoRecorder) $(CPPFLAGS_VideoRecorder) -o $@ main.cpp
+	
+$(TARGETDIR_VideoRecorder)/Watchdog.o: $(TARGETDIR_VideoRecorder) Watchdog.cpp
+	$(COMPILE.cc) $(CCFLAGS_VideoRecorder) $(CPPFLAGS_VideoRecorder) -o $@ Watchdog.cpp
 	
 $(TARGETDIR_VideoRecorder)/Camera.o: $(TARGETDIR_VideoRecorder) Camera.cpp
 	$(COMPILE.cc) $(CCFLAGS_VideoRecorder) $(CPPFLAGS_VideoRecorder) -o $@ Camera.cpp
@@ -62,6 +66,7 @@ clean:
 		$(TARGETDIR_VideoRecorder)/VideoRecorder \
 		$(TARGETDIR_VideoRecorder)/main.o \
 		$(TARGETDIR_VideoRecorder)/Utility.o \
+		$(TARGETDIR_VideoRecorder)/Watchdog.o \
 		$(TARGETDIR_VideoRecorder)/CustomException.o \
 		$(TARGETDIR_VideoRecorder)/Manager.o \
 		$(TARGETDIR_VideoRecorder)/Camera.o \

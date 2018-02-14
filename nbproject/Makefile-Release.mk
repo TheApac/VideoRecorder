@@ -39,6 +39,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/CustomException.o \
 	${OBJECTDIR}/Manager.o \
 	${OBJECTDIR}/Utility.o \
+	${OBJECTDIR}/Watchdog.o \
 	${OBJECTDIR}/main.o
 
 
@@ -85,6 +86,11 @@ ${OBJECTDIR}/Utility.o: Utility.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Utility.o Utility.cpp
+
+${OBJECTDIR}/Watchdog.o: Watchdog.cpp
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Watchdog.o Watchdog.cpp
 
 ${OBJECTDIR}/main.o: main.cpp
 	${MKDIR} -p ${OBJECTDIR}

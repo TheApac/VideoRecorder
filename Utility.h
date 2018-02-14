@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-/* 
+/*
  * File:   Utility.h
  * Author: Alexandre
  *
@@ -28,7 +28,7 @@ struct upload_status {
 };
 
 bool isOnlyNumeric(string &str); // Return true if the string represent a positive integer, else return false
-int sendEmail(string messageContent);   // send an email containing the parameter
+int sendEmail(string messageContent); // send an email containing the parameter
 static string defineDate(); // Retuen the date on the format of the email parameter
 void deamonize(); // Self explaining
 void createDirectoryVideos(string rootDirectory); // Create a subdirectory (and the directory if not existent) where records will be stored
@@ -36,6 +36,8 @@ static int timeSinceDate(string dateToCompare); // return the number of days sin
 static void removeContentOfDirectory(string path, bool exact); // remove every files in a directory (recursive)
 int removeOldFile(int nbDays, string path); // remove the files that are older than the maximum time to keep
 int configureSMTP();
-bool fileExists (const string& name);
+bool fileExists(const string& name);
+string currentDate();
+int secondsSinceDate(string dateToCompare);
 #endif /* UTILITY_H */
 
