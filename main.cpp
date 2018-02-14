@@ -26,28 +26,23 @@ using namespace std;
 
 int main() {
     struct passwd *pw = getpwuid(getuid());
-    string toRemove = string(pw->pw_dir) + "/.RunningVideoRecorder";
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    string toRemove = directoryOfFiles + "/.RunningVideoRecorder";
     remove(toRemove.c_str());
     int error = configureSMTP();
     if (error == EXIT_FAILURE) {
         cerr << "Config for SMTP is erroneous" << endl;
         exit(EXIT_FAILURE);
     }
-    try {
-        pid_t pid = fork();
-        if (pid == 0) {
-            //Manager *manager = new Manager();
-            //manager->run();
-        } else {
-            Watchdog *watchdog = new Watchdog();
-        }
-    } catch (CustomException &e) {
-        cerr << e.what() << endl;
-        string error = "File ~/.VideoRecorder/cameras.ini was not found on the server : ";
-        char hostname[128] = "";
-        gethostname(hostname, sizeof (hostname));
-        error += string(hostname) + "\n";
-        sendEmail(error);
-        exit(EXIT_FAILURE);
+    pid_t pid = fork();
+    if (pid == 0) {
+        Manager *manager = new Manager();
+        manager->run();
+    } else {
+        //        pid = fork();
+        //        if (pid == 0) {
+        Watchdog *watchdog = new Watchdog();
+        //        }
     }
+
 }

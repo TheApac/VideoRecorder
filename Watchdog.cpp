@@ -24,28 +24,33 @@ Watchdog::Watchdog() {
     deamonize();
     sleep(30);
     struct passwd *pw = getpwuid(getuid());
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    string fileName = directoryOfFiles + "/.RunningVideoRecorder";
     string line = "";
+    char hostname[128] = "";
     while (1) {
-        if (!fileExists(string(pw->pw_dir) + "/.RunningVideoRecorder")) {
-            pid_t pid = fork();
-            if (pid <= 0) {
-                Manager *manager = new Manager();
-                manager->run();
-            }
-        } else {
-            ifstream file(string(pw->pw_dir) + "/.RunningVideoRecorder");
+        ifstream file(fileName);
+        if (file.is_open()) {
             getline(file, line);
-            if (secondsSinceDate(line) > 60 * 5) {
-                //ERREUR
+            if (secondsSinceDate(line) > 60) {
+                gethostname(hostname, sizeof (hostname));
+                sendEmail("Le manager du serveur " + string(hostname) + " ne répondait plus");
                 pid_t pid = fork();
-                if (pid <= 0) {
+                if (pid == 0) {
+                    remove(fileName.c_str());
                     Manager *manager = new Manager();
                     manager->run();
                 }
             }
-            line = "";
-            file.close();
+        } else {
+            pid_t pid = fork();
+            if (pid == 0) {
+                Manager *manager = new Manager();
+                manager->run();
+            }
         }
+        line = "";
+        file.close();
         sleep(60);
     }
 }

@@ -139,7 +139,7 @@ int sendEmail(string messageContent) {
 
     curl = curl_easy_init();
     if (curl) {
-        mailContent = messageContent + "Time of error : " + defineDate().substr(6);
+        mailContent = messageContent + "\nTime of error : " + defineDate().substr(6);
         /* This is the configuration of the mailserver */
         curl_easy_setopt(curl, CURLOPT_USERNAME, loginSMTP.c_str());
         curl_easy_setopt(curl, CURLOPT_PASSWORD, passwordSMTP.c_str()); // TODO encryption
@@ -239,11 +239,14 @@ int secondsSinceDate(string dateToCompare) {
     timeinfo = localtime(&rawtime); // create a time structure
     timeinfo->tm_year = atoi(dateToCompare.substr(0, 4).c_str()) - 1900;
     timeinfo->tm_mon = atoi(dateToCompare.substr(5, 7).c_str()) - 1;
-    timeinfo->tm_mday = atoi(dateToCompare.substr(8).c_str());
+    timeinfo->tm_mday = atoi(dateToCompare.substr(8, 10).c_str());
+    timeinfo->tm_hour = atoi(dateToCompare.substr(11, 13).c_str());
+    timeinfo->tm_min = atoi(dateToCompare.substr(14, 16).c_str());
+    timeinfo->tm_sec = atoi(dateToCompare.substr(17).c_str());
     time_t x = mktime(timeinfo); // create a time_t struct from the timeinfo
     time_t raw_time = time(NULL); // create a time_t struct with current time
     time_t y = mktime(localtime(&raw_time));
-    double difference = difftime(y, x) / (60 * 60 * 24); // calculate the number of ms between two dates, convert it in days
+    double difference = difftime(y, x); // calculate the number of ms between two dates, convert it in days
     return difference;
 }
 
@@ -310,9 +313,10 @@ int removeOldFile(int nbDays, string path) {
 
 int configureSMTP() {
     struct passwd *pw = getpwuid(getuid());
-    ifstream file(string(pw->pw_dir) + "/.VideoRecorder/2NWatchDog.ini");
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    ifstream file(directoryOfFiles + "/ConfigFiles/2NWatchDog.ini");
     if (!file.is_open()) {
-        cerr << "~/.VideoRecorder/2NWatchDog.ini was not found" << endl;
+        cerr << directoryOfFiles << "/ConfigFiles/2NWatchDog.ini was not found" << endl;
     }
     string line;
     while (getline(file, line) && (urlSMTP == "" || loginSMTP == "" || passwordSMTP == "")) {
@@ -357,25 +361,27 @@ bool fileExists(const string& name) {
 string currentDate() {
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
-    string date = (now->tm_year + 1900) + ":";
+    string date = to_string(now->tm_year + 1900) + ":";
     if (now->tm_mon + 1 < 10) {
         date += "0";
     }
-    date += now->tm_mon + 1 + ":";
+
+    date += to_string(now->tm_mon + 1) + ":";
     if (now->tm_mday < 10) {
         date += "0";
     }
-    date += now->tm_mday + ":";
-    if (now->tm_hour + 1 < 10) {
+    date += to_string(now->tm_mday) + ":";
+    if (now->tm_hour < 10) {
         date += "0";
     }
-    date += now->tm_hour + 1 + ":";
+    date += to_string(now->tm_hour) + ":";
     if (now->tm_min < 10) {
         date += "0";
     }
-    date += now->tm_min + ":";
+    date += to_string(now->tm_min) + ":";
     if (now->tm_sec < 10) {
         date += "0";
     }
-    date += now->tm_sec + ":";
+    date += to_string(now->tm_sec);
+    return date;
 }

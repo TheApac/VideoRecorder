@@ -28,6 +28,7 @@ Manager::Manager() {
         exit(0);
     }
     struct passwd *pw = getpwuid(getuid());
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     name = "", log = "", password = "", url = "", path = "";
     ID = -1;
     nbdays = -1;
@@ -36,9 +37,14 @@ Manager::Manager() {
     int enregistrable = -1;
     int nbLinesRead = 0; // Keep the number of the current line to send it as detail if an error is encountered
 
-    ifstream file(string(pw->pw_dir) + "/.VideoRecorder/cameras.ini");
+    ifstream file(directoryOfFiles + "/ConfigFiles/cameras.ini");
     if (!file.is_open()) {
-        throw FileNotFound(string(pw->pw_dir) + "/.VideoRecorder/cameras.ini");
+        string error = "File " + directoryOfFiles + "/ConfigFiles/cameras.ini was not found on the server : ";
+        char hostname[128] = "";
+        gethostname(hostname, sizeof (hostname));
+        error += string(hostname) + "\n";
+        sendEmail(error);
+        exit(EXIT_FAILURE);
     }
     string line;
     regex ChangeCam("^\\[CAMERA");
@@ -181,20 +187,22 @@ void Manager::CameraOver(int &enregistrable) {
 
 Manager::~Manager() {
     struct passwd *pw = getpwuid(getuid());
-    string toRemove = string(pw->pw_dir) + "/.RunningVideoRecorder";
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    string toRemove = directoryOfFiles + "/.RunningVideoRecorder";
     remove(toRemove.c_str());
 }
 
 void Manager::run() {
-    deamonize();
     for (Camera *camera : CameraList) {
         pid_t pid = fork();
         if (pid == 0) {
-            //camera->record();
+            camera->record();
+            exit(0);
         }
     }
     struct passwd *pw = getpwuid(getuid());
-    string file = string(pw->pw_dir) + "/.RunningVideoRecorder";
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    string file = directoryOfFiles + "/.RunningVideoRecorder";
     while (1) {
         for (Camera *camera : CameraList) {
             if (camera == nullptr) {
@@ -212,10 +220,8 @@ void Manager::run() {
 
 bool Manager::isRunningManager() {
     struct passwd *pw = getpwuid(getuid());
-    //ifstream filerun(string(pw->pw_dir) + "/.RunningVideoRecorder");
-    ifstream filerun("/home/Alexandre/.RunningVideoRecorder");
-    if (filerun.is_open()) {
-        filerun.close();
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    if (fileExists(directoryOfFiles + "/.RunningVideoRecorder")) {
         return true;
     }
     return false;
