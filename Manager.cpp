@@ -138,15 +138,6 @@ Manager::Manager() {
         cerr << e.what() << " on line : " << nbLinesRead << endl; // If any error is encountered, display the error and the line
         string error = "Error in config file given as parameter for the Manager\n"
                 "The file : " + string(pw->pw_dir) + "/.VideoRecorder/cameras.ini" + " returned an " + string(e.what()) + " on line " + to_string(nbLinesRead) + "\n\n";
-        if (location != "") {
-            // If location is defined, add it as detail in the email
-            error += "Concerned site : " + location + "\n";
-        } else {
-            // Else add the hostname of the server
-            char hostname[128] = "";
-            gethostname(hostname, sizeof (hostname));
-            error += "Hostname of server : " + string(hostname) + "\n";
-        }
         // And send it by email
         sendEmail(error);
         // Quit the constructor
@@ -156,9 +147,15 @@ Manager::Manager() {
 
 void Manager::CameraOver(int &enregistrable) {
     if (ID != -1 && name != "" && log != "" && password != "" && url != "" && enregistrable != -1) {
+        // Make sure there is not two cameras with the same ID
+        for (Camera* camera : CameraList) {
+            if (camera->GetID() == ID) {
+                throw DuplicateID(to_string(ID));
+            }
+        }
         // If all the fields are completed and the camera can be recorded
         if (enregistrable == 1) {
-            CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url));
+            CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url, this));
         }
         // Reset all fields
         ID = -1;
@@ -204,11 +201,44 @@ void Manager::run() {
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string file = directoryOfFiles + "/.RunningVideoRecorder";
     while (1) {
+        removeOldCrashedCameras();
+        int indexCamera = 0;
         for (Camera *camera : CameraList) {
             if (camera == nullptr) {
-                exit(0);
-                //TODO Ajout erreur
+                CameraList.erase(CameraList.begin() + indexCamera);
             }
+            if (find(RunningCameraList.begin(), RunningCameraList.end(), to_string(camera->GetID())) == RunningCameraList.end()) {
+                int index = 0;
+                int IDToDelete = CameraList.at(0)->GetID();
+                while (IDToDelete != camera->GetID()) {
+                    ++index;
+                    IDToDelete = CameraList.at(index)->GetID();
+                }
+                CameraList.erase(CameraList.begin() + index);
+                path = camera->GetDirectory();
+                nbdays = camera->GetNbdays();
+                ID = camera->GetID();
+                name = camera->GetName();
+                log = camera->GetLog();
+                password = camera->GetPassword();
+                url = camera->GetUrl();
+                Camera* tempCamera = new Camera(path, nbdays, ID, name, log, password, url, this);
+                CameraList.push_back(tempCamera);
+                tempCamera->record();
+                if (!didCameraCrash(camera->GetID())) {
+                    CrashedCameraList.push_back(to_string(camera->GetID()) + "-" + currentDate());
+                    sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
+                }
+            } else {
+                int index = 0;
+                string runningCamera = RunningCameraList.at(index);
+                while (runningCamera != to_string(camera->GetID())) {
+                    ++index;
+                    runningCamera = RunningCameraList.at(index);
+                }
+                RunningCameraList.erase(RunningCameraList.begin() + index);
+            }
+            ++indexCamera;
         }
         remove(file.c_str());
         ofstream runfile(file);
@@ -223,6 +253,29 @@ bool Manager::isRunningManager() {
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     if (fileExists(directoryOfFiles + "/.RunningVideoRecorder")) {
         return true;
+    }
+    return false;
+}
+
+void Manager::removeOldCrashedCameras() {
+    vector<string> CrashedCameraListCopy = CrashedCameraList;
+    int index = 0;
+    for (string cameraInfo : CrashedCameraList) {
+        if (secondsSinceDate(cameraInfo.substr(cameraInfo.find_first_of('-') + 1)) > 10 * 60) {
+            CrashedCameraListCopy.erase(CrashedCameraListCopy.begin() + index);
+        }
+        ++index;
+    }
+    CrashedCameraList = CrashedCameraListCopy;
+}
+
+bool Manager::didCameraCrash(int ID) {
+    int index = 0;
+    while (index != CrashedCameraList.size()) {
+        if (CrashedCameraList.at(index).substr(0, CrashedCameraList.at(index).find_first_of("-")) == to_string(ID)) {
+            return true;
+        }
+        ++index;
     }
     return false;
 }

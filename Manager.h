@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-/* 
+/*
  * File:   Manager.h
  * Author: Alexandre
  *
@@ -26,9 +26,11 @@ public:
     void run();
     static bool isRunningManager();
     virtual ~Manager();
+    vector<string> RunningCameraList; // Vector in wich every camera will self declare in to show its still running
 private:
     void CameraOver(int &enregistrable);
     vector<Camera*> CameraList; /* Save each camera in a vector to run their record function after they all have been initialized */
+    vector<string> CrashedCameraList; // Vector that store which camera crashed when
     // Keep the value of the camera fields while creating them
     int nbdays;
     string path;
@@ -37,6 +39,8 @@ private:
     string password;
     string url;
     int ID;
+    bool didCameraCrash(int ID);
+    void removeOldCrashedCameras();
 };
 
 #endif /* MANAGER_H */

@@ -31,7 +31,7 @@ bool isOnlyNumeric(string &str); // Return true if the string represent a positi
 int sendEmail(string messageContent); // send an email containing the parameter
 static string defineDate(); // Retuen the date on the format of the email parameter
 void deamonize(); // Self explaining
-void createDirectoryVideos(string rootDirectory); // Create a subdirectory (and the directory if not existent) where records will be stored
+string createDirectoryVideos(string rootDirectory); // Create a subdirectory (and the directory if not existent) where records will be stored
 static int timeSinceDate(string dateToCompare); // return the number of days since a date
 static void removeContentOfDirectory(string path, bool exact); // remove every files in a directory (recursive)
 int removeOldFile(int nbDays, string path); // remove the files that are older than the maximum time to keep
@@ -39,5 +39,6 @@ int configureSMTP();
 bool fileExists(const string& name);
 string currentDate();
 int secondsSinceDate(string dateToCompare);
+void setLocation(string location);
 #endif /* UTILITY_H */
 

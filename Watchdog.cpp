@@ -60,7 +60,3 @@ Watchdog::Watchdog(const Watchdog & orig) {
 
 Watchdog::~Watchdog() {
 }
-
-void Watchdog::watch() {
-
-}

@@ -39,10 +39,6 @@ int main() {
         Manager *manager = new Manager();
         manager->run();
     } else {
-        //        pid = fork();
-        //        if (pid == 0) {
         Watchdog *watchdog = new Watchdog();
-        //        }
     }
-
 }

@@ -23,6 +23,7 @@ string mailContent = "";
 string loginSMTP = "";
 string passwordSMTP = "";
 string urlSMTP = "";
+string SiteLocation = "";
 
 bool isOnlyNumeric(string &str) {
     for (int positionChar = 0; positionChar < str.size() - 1; ++positionChar) { // iterate through the string
@@ -140,6 +141,15 @@ int sendEmail(string messageContent) {
     curl = curl_easy_init();
     if (curl) {
         mailContent = messageContent + "\nTime of error : " + defineDate().substr(6);
+        if (SiteLocation != "") {
+            // If location is defined, add it as detail in the email
+            mailContent += "\nConcerned site : " + SiteLocation;
+        } else {
+            // Else add the hostname of the server
+            char hostname[128] = "";
+            gethostname(hostname, sizeof (hostname));
+            mailContent += "\nHostname of server : " + string(hostname);
+        }
         /* This is the configuration of the mailserver */
         curl_easy_setopt(curl, CURLOPT_USERNAME, loginSMTP.c_str());
         curl_easy_setopt(curl, CURLOPT_PASSWORD, passwordSMTP.c_str()); // TODO encryption
@@ -195,7 +205,7 @@ void deamonize() {
     }
 }
 
-void createDirectoryVideos(string rootDirectory) {
+string createDirectoryVideos(string rootDirectory) {
     struct stat info;
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
@@ -213,6 +223,7 @@ void createDirectoryVideos(string rootDirectory) {
         mkdir(date.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory YYYY.MM.DD
     }
     mkdir(hour.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory "H"+HH in previously created directory
+    return hour;
 }
 
 static int timeSinceDate(string dateToCompare) {
@@ -264,14 +275,17 @@ static void removeContentOfDirectory(string path, bool exact) {
             if (ent->d_type == DT_DIR && !exact) { // if the date is higher than nbDays remove everything in every subdirectories
                 removeContentOfDirectory(path + "/" + ent->d_name, true);
                 string dirToRemove = path + "/" + ent->d_name;
-                remove(dirToRemove.c_str()); // remove the subdirectory
+                cout << dirToRemove << endl;
+                //remove(dirToRemove.c_str()); // remove the subdirectory
             } else if (ent->d_type == DT_DIR && exact && now->tm_hour > atoi(entryName.substr(entryName.size() - 2).c_str())) { // else only remove when the hour indicated is lower than current hour
                 removeContentOfDirectory(path + "/" + ent->d_name, true);
                 string dirToRemove = path + "/" + ent->d_name;
-                remove(dirToRemove.c_str()); // remove the subdirectory
+                cout << dirToRemove << endl;
+                //remove(dirToRemove.c_str()); // remove the subdirectory
             } else if (ent->d_type != DT_DIR) {
                 string fileToRemove = path + "/" + ent->d_name;
-                remove(fileToRemove.c_str()); // if it's not a directory, remove it
+                cout << fileToRemove << endl;
+                //remove(fileToRemove.c_str()); // if it's not a directory, remove it
             }
         }
         closedir(dir); //close the directory to prevent any memory leak
@@ -295,7 +309,8 @@ int removeOldFile(int nbDays, string path) {
             if (timeSinceDate(ent->d_name) > nbDays) {
                 string folderToRemove = path + "/" + ent->d_name; //absolute path to directory
                 removeContentOfDirectory(folderToRemove, false); // empty the directory
-                remove(folderToRemove.c_str()); // remove the directory
+                cout << folderToRemove << endl;
+                //remove(folderToRemove.c_str()); // remove the directory
             }
             if (timeSinceDate(ent->d_name) == nbDays) { // if date exactly equal to nbDays, we don't delete files where hour is higher than current hour
                 string folderToRemove = path + "/" + ent->d_name; //absolute path to directory
@@ -384,4 +399,8 @@ string currentDate() {
     }
     date += to_string(now->tm_sec);
     return date;
+}
+
+void setLocation(string location) {
+    SiteLocation = location;
 }

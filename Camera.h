@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-/* 
+/*
  * File:   Camera.h
  * Author: Alexandre
  *
@@ -15,11 +15,14 @@
 #define CAMERA_H
 
 #include <string>
+
+class Manager;
+
 using namespace std;
 
 class Camera {
 public:
-    Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url);
+    Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url, Manager* manager);
     virtual ~Camera();
     int GetID() const;
 
@@ -39,13 +42,15 @@ public:
 
     string getFileName();
 private:
-    string directory;   /* Directory where records will be saved */
-    int nbdays;         /* Positive integer \n\n Number of days to keep the records */
-    int ID;             /* Positive integer \n\n ID of the camera */
-    string name;        /* Name of the camera */
-    string url;         /* URL of the rtsp */
-    string log;         /* Log for the rtsp */
-    string password;    /* Password for the rtsp */
+    string directory; /* Directory where records will be saved */
+    int nbdays; /* Positive integer \n\n Number of days to keep the records */
+    int ID; /* Positive integer \n\n ID of the camera */
+    string name; /* Name of the camera */
+    string url; /* URL of the rtsp */
+    string log; /* Log for the rtsp */
+    string password; /* Password for the rtsp */
+    Manager* manager; /* Application manager */
+    string timeOfLastCrash; /* Keep the date of the last email sent */
 };
 
 #endif /* CAMERA_H */

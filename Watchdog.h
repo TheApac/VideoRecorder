@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-/* 
+/*
  * File:   Watchdog.h
  * Author: Alexandre
  *
@@ -21,9 +21,6 @@ public:
     Watchdog();
     Watchdog(const Watchdog& orig);
     virtual ~Watchdog();
-    void watch();
-private:
-    Manager* manager;
 };
 
 #endif /* WATCHDOG_H */

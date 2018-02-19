@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-/* 
+/*
  * File:   CustomException.h
  * Author: Alexandre
  *
@@ -40,12 +40,12 @@ public:
 
 class InvalidNbDays : public CustomException {
 public:
-    InvalidNbDays(std::string const& msg);/* Exception to throw when the parameter for the number of days is not a positive integer */
+    InvalidNbDays(std::string const& msg); /* Exception to throw when the parameter for the number of days is not a positive integer */
 };
 
 class DuplicateField : public CustomException {
 public:
-    DuplicateField(std::string const& msg);/* Exception to throw when a field is declared twice for the same camera in the configuration file */
+    DuplicateField(std::string const& msg); /* Exception to throw when a field is declared twice for the same camera in the configuration file */
 };
 
 class InvalidLine : public CustomException {
@@ -63,9 +63,9 @@ public:
     FileNotFound(std::string const& msg); /* Exception to throw when one of the configuration files is not found */
 };
 
-class InvalidSMTP : public CustomException {
+class DuplicateID : public CustomException {
 public:
-    InvalidSMTP(std::string const& msg); /* Exception to throw when one of the configuration files is not found */
+    DuplicateID(std::string const& msg); /* Exception to throw when one of the configuration files is not found */
 };
 
 #endif /* CUSTOMEXCEPTION_H */
