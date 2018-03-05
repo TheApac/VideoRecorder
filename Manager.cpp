@@ -23,7 +23,7 @@
 #include <pwd.h>
 
 Manager::Manager() {
-    deamonize();
+    //deamonize();
     if (isRunningManager()) {
         exit(0);
     }
@@ -155,7 +155,7 @@ void Manager::CameraOver(int &enregistrable) {
         }
         // If all the fields are completed and the camera can be recorded
         if (enregistrable == 1) {
-            CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url, this));
+            CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url));
         }
         // Reset all fields
         ID = -1;
@@ -177,12 +177,14 @@ void Manager::CameraOver(int &enregistrable) {
         } else if (url == "") {
             throw UndefinedField("URL");
         } else if (enregistrable == -1) {
+
             throw UndefinedField("Enregistrable");
         }
     }
 }
 
 Manager::~Manager() {
+
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string toRemove = directoryOfFiles + "/.RunningVideoRecorder";
@@ -201,7 +203,7 @@ void Manager::run() {
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string file = directoryOfFiles + "/.RunningVideoRecorder";
     while (1) {
-        removeOldCrashedCameras();
+        //removeOldCrashedCameras();
         int indexCamera = 0;
         for (Camera *camera : CameraList) {
             if (camera == nullptr) {
@@ -222,9 +224,9 @@ void Manager::run() {
                 log = camera->GetLog();
                 password = camera->GetPassword();
                 url = camera->GetUrl();
-                Camera* tempCamera = new Camera(path, nbdays, ID, name, log, password, url, this);
+                Camera* tempCamera = new Camera(path, nbdays, ID, name, log, password, url);
                 CameraList.push_back(tempCamera);
-                tempCamera->record();
+                //tempCamera->record();
                 if (!didCameraCrash(camera->GetID())) {
                     CrashedCameraList.push_back(to_string(camera->GetID()) + "-" + currentDate());
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
@@ -233,6 +235,7 @@ void Manager::run() {
                 int index = 0;
                 string runningCamera = RunningCameraList.at(index);
                 while (runningCamera != to_string(camera->GetID())) {
+
                     ++index;
                     runningCamera = RunningCameraList.at(index);
                 }
@@ -252,6 +255,7 @@ bool Manager::isRunningManager() {
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     if (fileExists(directoryOfFiles + "/.RunningVideoRecorder")) {
+
         return true;
     }
     return false;
@@ -262,6 +266,7 @@ void Manager::removeOldCrashedCameras() {
     int index = 0;
     for (string cameraInfo : CrashedCameraList) {
         if (secondsSinceDate(cameraInfo.substr(cameraInfo.find_first_of('-') + 1)) > 10 * 60) {
+
             CrashedCameraListCopy.erase(CrashedCameraListCopy.begin() + index);
         }
         ++index;

@@ -11,7 +11,7 @@
 #### Compiler and tool definitions shared by all build targets #####
 CCC = g++
 CXX = g++
-BASICOPTS = -g -std=c++11 -I /usr/local/include -L /usr/local/lib -lopencv_core -lopencv_highgui -lcurl -lsodium
+BASICOPTS = -g -std=c++11 -I/usr/local/include -L/usr/local/lib64 -lavdevice -lavdevice -lavutil -lavformat -lcurl -lsodium -static-libstdc++
 CCFLAGS = $(BASICOPTS)
 CXXFLAGS = $(BASICOPTS)
 CCADMIN =

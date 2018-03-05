@@ -22,7 +22,7 @@ using namespace std;
 
 class Camera {
 public:
-    Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url, Manager* manager);
+    Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url/*, Manager* manager*/);
     virtual ~Camera();
     int GetID() const;
 

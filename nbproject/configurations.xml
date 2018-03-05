@@ -52,9 +52,12 @@
           <standard>8</standard>
           <incDir>
             <pElem>/usr/local/lib</pElem>
-            <pElem>/usr/local/include/opencv2</pElem>
             <pElem>/usr/local/include/curl</pElem>
             <pElem>/usr/local/include/boost</pElem>
+            <pElem>/usr/local/include/opencv2</pElem>
+            <pElem>/usr/local/lib64</pElem>
+            <pElem>/root/ffmpeg_build/lib</pElem>
+            <pElem>/usr/lib64</pElem>
           </incDir>
           <warningLevel>2</warningLevel>
         </ccTool>
@@ -65,12 +68,18 @@
             <pElem>/usr/local/include/curl</pElem>
             <pElem>/usr/local/include/sodium</pElem>
             <pElem>/usr/local/include/boost</pElem>
+            <pElem>/usr/local/lib64</pElem>
+            <pElem>/root/ffmpeg_build/lib</pElem>
+            <pElem>/usr/lib64</pElem>
           </linkerAddLib>
           <linkerDynSerch>
             <pElem>/usr/local/include/opencv2</pElem>
             <pElem>/usr/local/include/curl</pElem>
             <pElem>/usr/local/include/sodium</pElem>
             <pElem>/usr/local/include/boost</pElem>
+            <pElem>/usr/local/lib64</pElem>
+            <pElem>/root/ffmpeg_build/lib</pElem>
+            <pElem>/usr/lib64</pElem>
           </linkerDynSerch>
           <linkerLibItems>
             <linkerLibLibItem>opencv_core</linkerLibLibItem>
