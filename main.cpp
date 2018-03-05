@@ -21,8 +21,9 @@ extern "C" {
 #include <libavformat/avformat.h>
 }
 #include <unistd.h>
-#include <signal.h>
+#include <fstream>
 #include <pwd.h>
+#include <string.h>
 
 using namespace std;
 
@@ -42,18 +43,71 @@ int main() {
     //
     //    Camera* cameraTest = new Camera(path, ID, nbdays, name, log, password, url);
     //    cameraTest->record();
+
+
     AVFormatContext* context = avformat_alloc_context();
+    int video_stream_index;
+
     av_register_all();
+    avcodec_register_all();
+    avformat_network_init();
+
+    //open rtsp
     if (avformat_open_input(&context, "rtsp://admin:2NTech-Lyon@192.168.0.212:4503/Stream1", NULL, NULL) != 0) {
-        cout << "erreur open" << endl;
-        return -1; // Couldn't open file
+        return EXIT_FAILURE;
     }
-    if (avformat_find_stream_info(context, NULL) > 0) {
-        cout << "erreur find info" << endl;
-        return -1;
+
+    if (avformat_find_stream_info(context, NULL) < 0) {
+        return EXIT_FAILURE;
     }
+
+    //search video stream
+    for (int i = 0; i < context->nb_streams; i++) {
+        if (context->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+            video_stream_index = i;
+    }
+
+    AVPacket packet;
+    av_init_packet(&packet);
+
+    //open output file
+    AVOutputFormat* fmt = av_guess_format(NULL, "test.mp4", NULL);
+    AVFormatContext* oc = avformat_alloc_context();
+    oc->oformat = fmt;
+    avio_open2(&oc->pb, "test.mp4", AVIO_FLAG_WRITE, NULL, NULL);
+
     AVStream* stream = NULL;
-    av_read_play(context);
+
+    av_read_play(context); //play RTSP
+    time_t t = time(0);
+    long int secondsToStop = time(&t) + 60 + 5;
+    long int secondsToWait = time(&t) + 5;
+    av_read_frame(context, &packet);
+    if (stream == NULL) {//create stream in file
+        stream = avformat_new_stream(oc, context->streams[video_stream_index]->codec->codec);
+        avcodec_copy_context(stream->codec, context->streams[video_stream_index]->codec);
+        stream->sample_aspect_ratio = context->streams[video_stream_index]->codec->sample_aspect_ratio;
+        int error = avformat_write_header(oc, NULL);
+    }
+    while (av_read_frame(context, &packet) >= 0 && time(&t) < secondsToWait) {
+    }
+
+    while (av_read_frame(context, &packet) >= 0 && time(&t) < secondsToStop) { // Loop while the file is not at its max time
+        if (packet.stream_index == video_stream_index) {//packet is video
+            av_write_frame(oc, &packet);
+        }
+        av_free_packet(&packet);
+        av_init_packet(&packet);
+    }
+
+    av_write_trailer(oc);
+    avio_close(oc->pb);
+    avformat_free_context(oc);
+
+    return (EXIT_SUCCESS);
+
+
+
 
     //pid_t pid = fork();
     //if (pid == 0) {
