@@ -32,9 +32,9 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
 }
 
 void Camera::record() {
-    //    string destinationDirectory = createDirectoryVideos(this->directory);
-    //    removeOldFile(1, this->directory);
-    //    string link = "rtsp://" + this->log + ":" + this->password + "@" + this->url;
+    string destinationDirectory = createDirectoryVideos(this->directory);
+    removeOldFile(1, this->directory);
+    string link = "rtsp://" + this->log + ":" + this->password + "@" + this->url;
     //    VideoCapture inputVideo(link); //open the stream with the identification
     //    if (!inputVideo.isOpened()) {
     //        sendEmail("Couldn't connect to the camera " + to_string(ID) + " of url " + url);
@@ -73,7 +73,7 @@ void Camera::record() {
     //                recordNext = true;
     //            }
     //        }
-    //        //if (find(this->manager->RunningCameraList.begin(), this->manager->RunningCameraList.end(), to_string(this->ID)) != this->manager->RunningCameraList.end()) {
+    //if (find(this->manager->RunningCameraList.begin(), this->manager->RunningCameraList.end(), to_string(this->ID)) == this->manager->RunningCameraList.end()) {
     //        //    this->manager->RunningCameraList.push_back(to_string(this->ID));
     //        //}
     //    }

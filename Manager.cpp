@@ -203,7 +203,7 @@ void Manager::run() {
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string file = directoryOfFiles + "/.RunningVideoRecorder";
     while (1) {
-        //removeOldCrashedCameras();
+        removeOldCrashedCameras();
         int indexCamera = 0;
         for (Camera *camera : CameraList) {
             if (camera == nullptr) {
@@ -235,7 +235,6 @@ void Manager::run() {
                 int index = 0;
                 string runningCamera = RunningCameraList.at(index);
                 while (runningCamera != to_string(camera->GetID())) {
-
                     ++index;
                     runningCamera = RunningCameraList.at(index);
                 }
@@ -266,7 +265,6 @@ void Manager::removeOldCrashedCameras() {
     int index = 0;
     for (string cameraInfo : CrashedCameraList) {
         if (secondsSinceDate(cameraInfo.substr(cameraInfo.find_first_of('-') + 1)) > 10 * 60) {
-
             CrashedCameraListCopy.erase(CrashedCameraListCopy.begin() + index);
         }
         ++index;
