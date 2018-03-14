@@ -16,13 +16,15 @@
 
 #include <string>
 
+#include "Manager.h"
+
 class Manager;
 
 using namespace std;
 
 class Camera {
 public:
-    Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url/*, Manager* manager*/);
+    Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url, Manager* manager);
     virtual ~Camera();
     int GetID() const;
 
@@ -40,8 +42,11 @@ public:
 
     void record();
 
+    static bool setSecondsToRecord(int sec);
+
     string getFileName();
 private:
+    static int SecondsToRecord; /* Positive integer \n\n Number of seconds of each recording */
     string directory; /* Directory where records will be saved */
     int nbdays; /* Positive integer \n\n Number of days to keep the records */
     int ID; /* Positive integer \n\n ID of the camera */

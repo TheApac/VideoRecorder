@@ -24,9 +24,10 @@ class Manager {
 public:
     Manager();
     void run();
+    void startRecords();
     static bool isRunningManager();
     virtual ~Manager();
-    vector<string> RunningCameraList; // Vector in wich every camera will self declare in to show its still running
+    //static struct node_t* RunningCameraList; // Linked list in wich every camera will self declare in to show its still running
 private:
     void CameraOver(int &enregistrable);
     vector<Camera*> CameraList; /* Save each camera in a vector to run their record function after they all have been initialized */

@@ -11,9 +11,9 @@
  * Created on 24 janvier 2018, 14:27
  */
 
+#include "Utility.h"
 #include "Manager.h"
 #include "CustomException.h"
-#include "Utility.h"
 #include "Watchdog.h"
 #include <iostream>
 #include <fstream>
@@ -67,25 +67,25 @@ Manager::Manager() {
                     }
                 } else if (parameterName == "Nom") {
                     if (name == "") { // if no name is set for the current camera
-                        name = parameterValue;
+                        name = parameterValue.substr(0, parameterValue.length() - 1);
                     } else { // two names are defined for the same camera
                         throw DuplicateField("Name (" + name.substr(0, name.size() - 1) + ")");
                     }
                 } else if (parameterName == "Login") {
                     if (log == "") { // if no log is set for the current camera
-                        log = parameterValue;
+                        log = parameterValue.substr(0, parameterValue.length() - 1);
                     } else { // two logs are defined for the same camera
                         throw DuplicateField("Log (" + log.substr(0, log.size() - 1) + ")");
                     }
                 } else if (parameterName == "Mdp") {
                     if (password == "") { // if no password is set for the current camera
-                        password = parameterValue;
+                        password = parameterValue.substr(0, parameterValue.length() - 1);
                     } else { // two passwords are defined for the same camera
                         throw DuplicateField("Password (" + password.substr(0, log.size() - 1) + ")");
                     }
                 } else if (parameterName == "URLCamera") {
                     if (url == "") { // if no url is set for the current camera
-                        url = parameterValue;
+                        url = parameterValue.substr(0, parameterValue.length() - 1);
                     } else { // two URLs are defined for the same camera
                         throw DuplicateField("URL (" + url.substr(0, log.size() - 1) + ")");
                     }
@@ -96,7 +96,7 @@ Manager::Manager() {
                     }
                 } else if (parameterName == "DossierEnreg") {
                     if (path == "") {
-                        path = parameterValue;
+                        path = parameterValue.substr(0, parameterValue.length() - 1);
                     } else { //only one saving directory can be specified
                         throw DuplicateField("Path");
                     }
@@ -116,6 +116,12 @@ Manager::Manager() {
                         location = parameterValue;
                     } else { //only one location can be specified
                         throw DuplicateField("Site");
+                    }
+                } else if (parameterName == "nbSecondsRecord") {
+                    if (isOnlyNumeric(parameterValue)) {
+                        if (!Camera::setSecondsToRecord(atoi(parameterValue.c_str()))) {
+                            throw DuplicateField("Number of seconds to record");
+                        }
                     }
                 }
             } else if (regex_search(line, ChangeCam)) { //When changing camera config, check if previous is ok
@@ -155,7 +161,7 @@ void Manager::CameraOver(int &enregistrable) {
         }
         // If all the fields are completed and the camera can be recorded
         if (enregistrable == 1) {
-            CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url));
+            CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url, this));
         }
         // Reset all fields
         ID = -1;
@@ -177,7 +183,6 @@ void Manager::CameraOver(int &enregistrable) {
         } else if (url == "") {
             throw UndefinedField("URL");
         } else if (enregistrable == -1) {
-
             throw UndefinedField("Enregistrable");
         }
     }
@@ -191,7 +196,7 @@ Manager::~Manager() {
     remove(toRemove.c_str());
 }
 
-void Manager::run() {
+void Manager::startRecords() {
     for (Camera *camera : CameraList) {
         pid_t pid = fork();
         if (pid == 0) {
@@ -199,24 +204,30 @@ void Manager::run() {
             exit(0);
         }
     }
+    sleep(30);
+}
+
+void Manager::run() {
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string file = directoryOfFiles + "/.RunningVideoRecorder";
+    bool isPresent = true;
     while (1) {
         removeOldCrashedCameras();
         int indexCamera = 0;
+        //vector<Camera*> CameraListCopy = CameraList;
         for (Camera *camera : CameraList) {
-            if (camera == nullptr) {
-                CameraList.erase(CameraList.begin() + indexCamera);
-            }
-            if (find(RunningCameraList.begin(), RunningCameraList.end(), to_string(camera->GetID())) == RunningCameraList.end()) {
+            cout << "test manager : " << getTest() << endl;
+            //cout << getRunningCameraSize() << endl;
+            //isPresent = IsInRunningList(to_string(camera->GetID()));
+            //cout << boolalpha << isPresent << endl;
+            if (!isPresent) {
                 int index = 0;
                 int IDToDelete = CameraList.at(0)->GetID();
                 while (IDToDelete != camera->GetID()) {
                     ++index;
                     IDToDelete = CameraList.at(index)->GetID();
                 }
-                CameraList.erase(CameraList.begin() + index);
                 path = camera->GetDirectory();
                 nbdays = camera->GetNbdays();
                 ID = camera->GetID();
@@ -224,21 +235,20 @@ void Manager::run() {
                 log = camera->GetLog();
                 password = camera->GetPassword();
                 url = camera->GetUrl();
-                Camera* tempCamera = new Camera(path, nbdays, ID, name, log, password, url);
+                Camera* tempCamera = new Camera(path, nbdays, ID, name, log, password, url, this);
                 CameraList.push_back(tempCamera);
-                //tempCamera->record();
+                CameraList.erase(CameraList.begin() + index);
+                pid_t pid = fork();
+                if (pid == 0) {
+                    tempCamera->record();
+                    exit(0);
+                }
                 if (!didCameraCrash(camera->GetID())) {
                     CrashedCameraList.push_back(to_string(camera->GetID()) + "-" + currentDate());
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
                 }
             } else {
-                int index = 0;
-                string runningCamera = RunningCameraList.at(index);
-                while (runningCamera != to_string(camera->GetID())) {
-                    ++index;
-                    runningCamera = RunningCameraList.at(index);
-                }
-                RunningCameraList.erase(RunningCameraList.begin() + index);
+                deleteNode(to_string(camera->GetID()));
             }
             ++indexCamera;
         }
@@ -254,7 +264,6 @@ bool Manager::isRunningManager() {
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     if (fileExists(directoryOfFiles + "/.RunningVideoRecorder")) {
-
         return true;
     }
     return false;
@@ -274,11 +283,13 @@ void Manager::removeOldCrashedCameras() {
 
 bool Manager::didCameraCrash(int ID) {
     int index = 0;
-    while (index != CrashedCameraList.size()) {
-        if (CrashedCameraList.at(index).substr(0, CrashedCameraList.at(index).find_first_of("-")) == to_string(ID)) {
-            return true;
+    if (CrashedCameraList.size() > 0) {
+        while (index != CrashedCameraList.size()) {
+            if (CrashedCameraList[index].substr(0, CrashedCameraList[index].find_first_of('-')) == to_string(ID)) {
+                return true;
+            }
+            ++index;
         }
-        ++index;
     }
     return false;
 }

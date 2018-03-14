@@ -27,6 +27,16 @@ struct upload_status {
     int lines_read;
 };
 
+struct node_t {
+    string value;
+    struct node_t* next;
+};
+static int test;
+static struct node_t* RunningCameraList; // keep the cameras running
+int getRunningCameraSize(/*node_t** head*/);
+bool IsInRunningList(/*node_t** head, */string ID);
+void deleteNode(string valueToDelete);
+void addRunningCamera(/*node_t** head, */string ID);
 bool isOnlyNumeric(string &str); // Return true if the string represent a positive integer, else return false
 int sendEmail(string messageContent); // send an email containing the parameter
 static string defineDate(); // Retuen the date on the format of the email parameter
@@ -40,5 +50,8 @@ bool fileExists(const string& name);
 string currentDate();
 int secondsSinceDate(string dateToCompare);
 void setLocation(string location);
+
+int getTest();
+
 #endif /* UTILITY_H */
 

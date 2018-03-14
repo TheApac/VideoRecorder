@@ -16,6 +16,11 @@
 #include <curl/curl.h>
 #include <iostream>
 #include <pwd.h>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/thread.hpp>
+
+boost::mutex v_mutex;
+
 
 using namespace std;
 
@@ -218,7 +223,7 @@ string createDirectoryVideos(string rootDirectory) {
         day = "0" + day; // if day < 10 we add a 0 in front of the number
     }
     string date = rootDirectory + "/" + std::to_string(now->tm_year + 1900) + "." + month + "." + day; //get current date
-    string hour = date + "/H" + to_string(now->tm_hour); //get current hour
+    string hour = date + "/H" + to_string(now->tm_hour) + "/"; //get current hour
     if (stat(date.c_str(), &info) != 0) {
         mkdir(date.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory YYYY.MM.DD
     }
@@ -292,8 +297,9 @@ static void removeContentOfDirectory(string path, bool exact) {
     }
 }
 
+//remove every file under path, older than nbDays
+
 int removeOldFile(int nbDays, string path) {
-    //remove every file under path, older than nbDays
     DIR *dir;
     struct dirent *ent;
     if ((dir = opendir(path.c_str())) != NULL) {
@@ -369,6 +375,8 @@ bool fileExists(const string& name) {
     return (stat(name.c_str(), &buffer) == 0);
 }
 
+/* Return the current date in a
+ * YYYY:MM:DD:HH::mm::ss format*/
 string currentDate() {
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
@@ -399,4 +407,75 @@ string currentDate() {
 
 void setLocation(string location) {
     SiteLocation = location;
+}
+
+void addRunningCamera(/*node_t** head, */string ID) {
+    //printf("Inside addRunningCamera : The list at adress %p contains %d elements\n", RunningCameraList, getRunningCameraSize(/*&RunningCameraList*/));
+    v_mutex.lock();
+    test = 3;
+    struct node_t* newNode = (struct node_t*) malloc(sizeof (node_t));
+    newNode->value = ID;
+    newNode->next = RunningCameraList;
+    RunningCameraList = newNode;
+    v_mutex.unlock();
+    //printf("After add : The list at adress %p contains %d elements\n", RunningCameraList, getRunningCameraSize(/*&RunningCameraList*/));
+}
+
+int getRunningCameraSize(/*node_t** head*/) {
+    v_mutex.lock();
+    int size = 0;
+    struct node_t* nodeSearch = (struct node_t*) malloc(sizeof (node_t));
+    nodeSearch = RunningCameraList;
+    while (nodeSearch != NULL) {
+        nodeSearch = nodeSearch->next;
+        size++;
+    }
+    v_mutex.unlock();
+    return size;
+}
+
+bool IsInRunningList(string ID) {
+    v_mutex.lock();
+    test = 5;
+    struct node_t *nodeSearch = (struct node_t*) malloc(sizeof (node_t));
+    nodeSearch = RunningCameraList;
+    if (nodeSearch == NULL) {
+        v_mutex.unlock();
+        return false;
+    }
+    while (nodeSearch->next != NULL && nodeSearch->value != ID) {
+        nodeSearch = nodeSearch->next;
+    }
+    bool returnValue = false;
+    if (nodeSearch->value == ID) {
+        returnValue = true;
+    }
+    v_mutex.unlock();
+    return returnValue;
+}
+
+void deleteNode(string valueToDelete) {
+    v_mutex.lock();
+    struct node_t* nodeSearch = (struct node_t*) malloc(sizeof (node_t));
+    struct node_t* previous = (struct node_t*) malloc(sizeof (node_t));
+    nodeSearch = RunningCameraList;
+    if (nodeSearch != nullptr) {
+        if (nodeSearch->value == valueToDelete) {
+            RunningCameraList = nodeSearch->next;
+            nodeSearch = NULL;
+        }
+        while (nodeSearch != nullptr && nodeSearch->value != valueToDelete) {
+            previous = nodeSearch;
+            nodeSearch = nodeSearch->next;
+        }
+        if (nodeSearch != NULL) {
+            previous->next = nodeSearch->next;
+        }
+    }
+    v_mutex.unlock();
+}
+
+int getTest() {
+    printf("%p : ", &test);
+    return test;
 }
