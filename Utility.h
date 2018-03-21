@@ -18,8 +18,11 @@
 #define TO_ADDR      "<a.cuevas@2n-tech.com>"
 #define FROM_MAIL "2N Technologies" FROM_ADDR
 #define TO_MAIL   "Notified person " TO_ADDR
-
 #include <string>
+
+#define DEFAULT_TIME_BETWEEN_RECORDS 30
+#define DEFAULT_TIME_RECORDS 900
+#define DEFAULT_DAYS_TO_KEEP 30
 
 using namespace std;
 
@@ -31,7 +34,8 @@ struct node_t {
     string value;
     struct node_t* next;
 };
-static int test;
+
+volatile static int test;
 static struct node_t* RunningCameraList; // keep the cameras running
 int getRunningCameraSize(/*node_t** head*/);
 bool IsInRunningList(/*node_t** head, */string ID);
@@ -50,8 +54,7 @@ bool fileExists(const string& name);
 string currentDate();
 int secondsSinceDate(string dateToCompare);
 void setLocation(string location);
-
-int getTest();
+bool isRunningManager();
 
 #endif /* UTILITY_H */
 

@@ -37,18 +37,13 @@ int main() {
         cerr << "Config for SMTP is erroneous" << endl;
         exit(EXIT_FAILURE);
     }
-    //string name = "test", log = "admin", password = "2NTech-Lyon", url = "192.168.0.212:4503/Stream1", path = "/home/Alexandre/testDirectory";
-    //int ID = 1, nbdays = 1;
-    //Camera* cameraTest = new Camera(path, ID, nbdays, name, log, password, url);
-    //cameraTest->record();
 
-    //pid_t pid = fork();
-    //if (pid == 0) {
-    Manager *manager = new Manager();
-    manager->startRecords();
-    manager->run();
-
-    //} else {
-    //Watchdog *watchdog = new Watchdog();
-    //}
+    pid_t pid = fork();
+    if (pid == 0) {
+        sleep(10);
+        //Watchdog *watchdog = new Watchdog();
+    } else {
+        Manager *manager = new Manager();
+        manager->startRecords();
+    }
 }

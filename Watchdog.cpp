@@ -28,6 +28,7 @@ Watchdog::Watchdog() {
     string fileName = directoryOfFiles + "/.RunningVideoRecorder";
     string line = "";
     char hostname[128] = "";
+    remove(fileName.c_str());
     while (1) {
         ifstream file(fileName);
         if (file.is_open()) {
@@ -35,18 +36,19 @@ Watchdog::Watchdog() {
             if (secondsSinceDate(line) > 60) {
                 gethostname(hostname, sizeof (hostname));
                 sendEmail("Le manager du serveur " + string(hostname) + " ne répondait plus");
+                Camera::reinitTimeRecord();
                 pid_t pid = fork();
                 if (pid == 0) {
                     remove(fileName.c_str());
                     Manager *manager = new Manager();
-                    manager->run();
+                    manager->startRecords();
                 }
             }
         } else {
             pid_t pid = fork();
             if (pid == 0) {
                 Manager *manager = new Manager();
-                manager->run();
+                manager->startRecords();
             }
         }
         line = "";

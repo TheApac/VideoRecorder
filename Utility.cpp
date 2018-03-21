@@ -30,10 +30,11 @@ string passwordSMTP = "";
 string urlSMTP = "";
 string SiteLocation = "";
 
+/* Verify if every char of a string is a number */
 bool isOnlyNumeric(string &str) {
     for (int positionChar = 0; positionChar < str.size() - 1; ++positionChar) { // iterate through the string
-        if (str.at(positionChar) < '0' || str.at(positionChar) > '9') { // if a non-digit char is found
-            return false;
+        if (str.at(positionChar) < '0' || str.at(positionChar) > '9') { // true if anything but a number is seen
+            return false; // return false if anything but a number is seen
         }
     }
     return true; // return true if end of function is reached
@@ -68,8 +69,8 @@ static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) 
     return 0;
 }
 
+/* Return the date line to include in the mail */
 static string defineDate() {
-    // return the date line to include in the mail
     string date = "";
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
@@ -231,8 +232,8 @@ string createDirectoryVideos(string rootDirectory) {
     return hour;
 }
 
+/* Calculate the number of days ellapsed since a date formated as "YYYY:MM:DD" */
 static int timeSinceDate(string dateToCompare) {
-    // Calculate the number of days ellapsed since a date formated as "YYYY:MM:DD"
     time_t rawtime;
     struct tm* timeinfo;
     time(&rawtime);
@@ -247,8 +248,8 @@ static int timeSinceDate(string dateToCompare) {
     return difference;
 }
 
+/* Calculate the number of seconds ellapsed since a date formated as "YYYY:MM:DD" */
 int secondsSinceDate(string dateToCompare) {
-    // Calculate the number of seconds ellapsed since a date formated as "YYYY:MM:DD"
     time_t rawtime;
     struct tm* timeinfo;
     time(&rawtime);
@@ -292,8 +293,7 @@ static void removeContentOfDirectory(string path, bool exact) {
         }
         closedir(dir); //close the directory to prevent any memory leak
     } else {
-        // Set the error message in case of bug
-        perror("Could not open the directory");
+        perror("Could not open the directory"); // Set the error message in case of bug
     }
 }
 
@@ -410,15 +410,12 @@ void setLocation(string location) {
 }
 
 void addRunningCamera(/*node_t** head, */string ID) {
-    //printf("Inside addRunningCamera : The list at adress %p contains %d elements\n", RunningCameraList, getRunningCameraSize(/*&RunningCameraList*/));
     v_mutex.lock();
-    test = 3;
-    struct node_t* newNode = (struct node_t*) malloc(sizeof (node_t));
+    struct node_t* newNode = new node_t;
     newNode->value = ID;
     newNode->next = RunningCameraList;
     RunningCameraList = newNode;
     v_mutex.unlock();
-    //printf("After add : The list at adress %p contains %d elements\n", RunningCameraList, getRunningCameraSize(/*&RunningCameraList*/));
 }
 
 int getRunningCameraSize(/*node_t** head*/) {
@@ -436,7 +433,6 @@ int getRunningCameraSize(/*node_t** head*/) {
 
 bool IsInRunningList(string ID) {
     v_mutex.lock();
-    test = 5;
     struct node_t *nodeSearch = (struct node_t*) malloc(sizeof (node_t));
     nodeSearch = RunningCameraList;
     if (nodeSearch == NULL) {
@@ -475,7 +471,12 @@ void deleteNode(string valueToDelete) {
     v_mutex.unlock();
 }
 
-int getTest() {
-    printf("%p : ", &test);
-    return test;
+/* Check if there is not already a manager running */
+bool isRunningManager() {
+    struct passwd *pw = getpwuid(getuid());
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    if (fileExists(directoryOfFiles + "/.RunningVideoRecorder")) {
+        return true;
+    }
+    return false;
 }
