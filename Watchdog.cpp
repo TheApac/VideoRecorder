@@ -21,27 +21,28 @@
 #include <fstream>
 
 Watchdog::Watchdog() {
-    deamonize();
-    sleep(30);
+    //deamonize();
+    sleep(60);
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string fileName = directoryOfFiles + "/.RunningVideoRecorder";
     string line = "";
     char hostname[128] = "";
-    remove(fileName.c_str());
     while (1) {
         ifstream file(fileName);
-        if (file.is_open()) {
-            getline(file, line);
-            if (secondsSinceDate(line) > 60) {
-                gethostname(hostname, sizeof (hostname));
-                sendEmail("Le manager du serveur " + string(hostname) + " ne répondait plus");
-                Camera::reinitTimeRecord();
-                pid_t pid = fork();
-                if (pid == 0) {
-                    remove(fileName.c_str());
-                    Manager *manager = new Manager();
-                    manager->startRecords();
+        if (fileExists(fileName)) {
+            if (file.is_open()) {
+                getline(file, line);
+                if (secondsSinceDate(line) > 60) {
+                    gethostname(hostname, sizeof (hostname));
+                    sendEmail("Le manager du serveur " + string(hostname) + " ne répondait plus");
+                    Camera::reinitTimeRecord();
+                    pid_t pid = fork();
+                    if (pid == 0) {
+                        remove(fileName.c_str());
+                        Manager *manager = new Manager();
+                        manager->startRecords();
+                    }
                 }
             }
         } else {

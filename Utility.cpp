@@ -20,6 +20,7 @@
 #include <boost/thread/thread.hpp>
 
 boost::mutex v_mutex;
+boost::mutex mutex_crashed;
 
 
 using namespace std;
@@ -297,8 +298,7 @@ static void removeContentOfDirectory(string path, bool exact) {
     }
 }
 
-//remove every file under path, older than nbDays
-
+/* remove every file under path, older than nbDays */
 int removeOldFile(int nbDays, string path) {
     DIR *dir;
     struct dirent *ent;
@@ -321,8 +321,7 @@ int removeOldFile(int nbDays, string path) {
         }
         closedir(dir); //close the directory to prevent any memory leak
         return EXIT_SUCCESS;
-    } else {
-        // Set the error message in case of bug
+    } else { // Set the error message in case of bug
         perror("Could not open the directory");
         return EXIT_FAILURE;
     }
@@ -364,9 +363,8 @@ int configureSMTP() {
         cerr << "No SMTP password specified" << endl;
         error = true;
     }
-    if (error) {
+    if (error)
         return EXIT_FAILURE;
-    }
     return EXIT_SUCCESS;
 }
 
@@ -384,7 +382,6 @@ string currentDate() {
     if (now->tm_mon + 1 < 10) {
         date += "0";
     }
-
     date += to_string(now->tm_mon + 1) + ":";
     if (now->tm_mday < 10) {
         date += "0";
@@ -409,7 +406,7 @@ void setLocation(string location) {
     SiteLocation = location;
 }
 
-void addRunningCamera(/*node_t** head, */string ID) {
+void addRunningCamera(string ID) {
     v_mutex.lock();
     struct node_t* newNode = new node_t;
     newNode->value = ID;
@@ -418,10 +415,10 @@ void addRunningCamera(/*node_t** head, */string ID) {
     v_mutex.unlock();
 }
 
-int getRunningCameraSize(/*node_t** head*/) {
+int getRunningCameraSize() {
     v_mutex.lock();
     int size = 0;
-    struct node_t* nodeSearch = (struct node_t*) malloc(sizeof (node_t));
+    struct node_t * nodeSearch = nullptr;
     nodeSearch = RunningCameraList;
     while (nodeSearch != NULL) {
         nodeSearch = nodeSearch->next;
@@ -433,13 +430,13 @@ int getRunningCameraSize(/*node_t** head*/) {
 
 bool IsInRunningList(string ID) {
     v_mutex.lock();
-    struct node_t *nodeSearch = (struct node_t*) malloc(sizeof (node_t));
+    struct node_t *nodeSearch = nullptr;
     nodeSearch = RunningCameraList;
     if (nodeSearch == NULL) {
         v_mutex.unlock();
         return false;
     }
-    while (nodeSearch->next != NULL && nodeSearch->value != ID) {
+    while (nodeSearch->value != ID && nodeSearch->next != NULL) {
         nodeSearch = nodeSearch->next;
     }
     bool returnValue = false;
@@ -452,8 +449,8 @@ bool IsInRunningList(string ID) {
 
 void deleteNode(string valueToDelete) {
     v_mutex.lock();
-    struct node_t* nodeSearch = (struct node_t*) malloc(sizeof (node_t));
-    struct node_t* previous = (struct node_t*) malloc(sizeof (node_t));
+    struct node_t* nodeSearch = nullptr;
+    struct node_t* previous = nullptr;
     nodeSearch = RunningCameraList;
     if (nodeSearch != nullptr) {
         if (nodeSearch->value == valueToDelete) {
@@ -479,4 +476,67 @@ bool isRunningManager() {
         return true;
     }
     return false;
+}
+
+void CleanUpNodes() {
+    CleanUpNodesRec(RunningCameraList);
+}
+
+void CleanUpNodesRec(node_t* head) {
+    if (head->next) {
+        CleanUpNodesRec(head->next);
+    }
+    delete head;
+}
+
+void removeOldCrashedCameras() {
+    mutex_crashed.lock();
+    vector<string> CrashedCameraListCopy = CrashedCameraList;
+    int index = 0;
+    for (string cameraInfo : CrashedCameraListCopy) {
+        if (secondsSinceDate(cameraInfo.substr(cameraInfo.find_first_of('-') + 1)) > 10 * 60) {
+            CrashedCameraListCopy.erase(CrashedCameraListCopy.begin() + index);
+        }
+        ++index;
+    }
+    CrashedCameraList = CrashedCameraListCopy;
+    mutex_crashed.unlock();
+}
+
+bool didCameraCrash(int ID) {
+    mutex_crashed.lock();
+    int index = 0;
+    while (index != CrashedCameraList.size()) {
+        if (CrashedCameraList[index].substr(0, CrashedCameraList[index].find_first_of('-')) == to_string(ID)) {
+            mutex_crashed.unlock();
+            return true;
+        }
+        ++index;
+    }
+    mutex_crashed.unlock();
+    return false;
+}
+
+int timeSinceCrashCamera(int IDCam) {
+    if (!didCameraCrash(IDCam)) {
+        return 9999999;
+    }
+    int nbSecondsSinceCrash = 0;
+    mutex_crashed.lock();
+    int index = 0;
+    while (index != CrashedCameraList.size()) {
+        if (CrashedCameraList.at(index).substr(0, CrashedCameraList.at(index).find_first_of('-')) == to_string(IDCam)) {
+            nbSecondsSinceCrash = secondsSinceDate(CrashedCameraList.at(index).substr(CrashedCameraList.at(index).find_first_of('-') + 1));
+        }
+    }
+    mutex_crashed.unlock();
+    return nbSecondsSinceCrash;
+}
+
+void addCrashedCamera(int ID) {
+    if (!didCameraCrash(ID)) {
+        mutex_crashed.lock();
+        CrashedCameraList.push_back(to_string(ID) + "-" + currentDate());
+        mutex_crashed.unlock();
+    }
 }

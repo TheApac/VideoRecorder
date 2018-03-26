@@ -37,13 +37,12 @@ int main() {
         cerr << "Config for SMTP is erroneous" << endl;
         exit(EXIT_FAILURE);
     }
-
     pid_t pid = fork();
     if (pid == 0) {
-        sleep(10);
-        //Watchdog *watchdog = new Watchdog();
+        Watchdog *watchdog = new Watchdog();
     } else {
         Manager *manager = new Manager();
         manager->startRecords();
+        delete manager;
     }
 }

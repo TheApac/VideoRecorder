@@ -19,6 +19,7 @@
 #define FROM_MAIL "2N Technologies" FROM_ADDR
 #define TO_MAIL   "Notified person " TO_ADDR
 #include <string>
+#include <vector>
 
 #define DEFAULT_TIME_BETWEEN_RECORDS 30
 #define DEFAULT_TIME_RECORDS 900
@@ -35,7 +36,7 @@ struct node_t {
     struct node_t* next;
 };
 
-volatile static int test;
+static vector<string> CrashedCameraList; // Vector that store which camera crashed when
 static struct node_t* RunningCameraList; // keep the cameras running
 int getRunningCameraSize(/*node_t** head*/);
 bool IsInRunningList(/*node_t** head, */string ID);
@@ -55,6 +56,12 @@ string currentDate();
 int secondsSinceDate(string dateToCompare);
 void setLocation(string location);
 bool isRunningManager();
+void CleanUpNodes();
+static void CleanUpNodesRec(node_t* head);
+bool didCameraCrash(int ID);
+void removeOldCrashedCameras();
+int timeSinceCrashCamera(int IDCam);
+void addCrashedCamera(int ID);
 
 #endif /* UTILITY_H */
 

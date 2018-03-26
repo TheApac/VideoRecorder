@@ -26,7 +26,7 @@ using namespace boost;
 
 Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url) {
     if (SecondsToRecord == -1) {
-        SecondsToRecord = DEFAULT_TIME_RECORDS; // 900 (15 * 60) : Default time 15 minutes
+        SecondsToRecord = 30; //DEFAULT_TIME_RECORDS; // 900 (15 * 60) : Default time 15 minutes
     }
     if (path.at(path.length() - 1) == '/') { // add a "/" at the end of the path if there is none
         this->directory = path;
@@ -55,12 +55,18 @@ void Camera::record() {
     avcodec_register_all(); // Register all the codecs, parsers and bitstream filters
     bool error = false;
     if (avformat_open_input(&context, link.c_str(), NULL, NULL) != 0) { //open rtsp
-        sendEmail("Couldn't connect to the camera " + to_string(this->ID) + " of url " + this->url); // mail if camera is unreachable
+        if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
+            sendEmail("Couldn't connect to the camera " + to_string(this->ID) + " of url " + this->url); // mail if camera is unreachable
+            addCrashedCamera(this->ID);
+        }
         error = true;
     }
     if (!error) {
         if (avformat_find_stream_info(context, NULL) < 0) { // retrieve informations of the stream
-            sendEmail("Couldn't retrieve informations for the camera " + to_string(this->ID) + " of url " + this->url);
+            if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
+                sendEmail("Couldn't retrieve informations for the camera " + to_string(this->ID) + " of url " + this->url);
+                addCrashedCamera(this->ID);
+            }
             error = true;
         }
     }
@@ -79,39 +85,44 @@ void Camera::record() {
         stream = avformat_new_stream(oc, context->streams[video_stream_index]->codec->codec); // save which stream to mux
         avcodec_copy_context(stream->codec, context->streams[video_stream_index]->codec); // set infos to the camera's ones
         stream->sample_aspect_ratio = context->streams[video_stream_index]->codec->sample_aspect_ratio; //set the file dimensions ratio
-        avformat_write_header(oc, NULL); // write the header in the out file
-        bool recordNext = false; // start only one other recording
-        time_t t = time(0);
-        long int secondsToStop = time(&t) + SecondsToRecord; // save when to stop recording this video
-
-        while (time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
-            if (av_read_frame(context, &packet) < 0) {
-                if (secondsSinceDate(this->timeOfLastCrash) < 10 * 60) { // Don't send 2 mails in less than 10 min
-                    sendEmail("The camera " + to_string(this->ID) + " of url " + this->url + " stopped sending informations");
-                    this->timeOfLastCrash = currentDate(); // set the time of last mail to now
-                    break;
-                }
-            }
-            if (packet.stream_index == video_stream_index) { //check if the packet is a video
-                av_write_frame(oc, &packet); // write the frame in the out file
-            }
-            if (!recordNext && time(&t) + 5 == secondsToStop) {
-                thread(&Camera::record, this);
-                recordNext = true;
-            }
-            if (!IsInRunningList(to_string(this->ID))) {
-                addRunningCamera(to_string(this->ID));
-            }
-            av_free_packet(&packet); // clear the packet
-            av_init_packet(&packet); // init the packet
+        int worked = avformat_write_header(oc, NULL); // write the header in the out file
+        if (worked < 0) {
+            error = true;
         }
-        av_write_trailer(oc); // write the trailer in the out file
-        // ---------- CLEANUP ---------- //
-        avio_closep(&oc->pb);
-        avformat_free_context(oc);
-        av_free_packet(&packet);
-        avformat_close_input(&context);
-        // ----------------------------- //
+        if (!error) {
+            bool recordNext = false; // start only one other recording
+            time_t t = time(0);
+            long int secondsToStop = time(&t) + SecondsToRecord; // save when to stop recording this video
+
+            while (time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
+                if (av_read_frame(context, &packet) < 0) {
+                    if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
+                        sendEmail("The camera " + to_string(this->ID) + " of url " + this->url + " stopped sending informations");
+                        addCrashedCamera(this->ID);
+                        break;
+                    }
+                }
+                if (packet.stream_index == video_stream_index) { //check if the packet is a video
+                    av_write_frame(oc, &packet); // write the frame in the out file
+                }
+                if (!recordNext && time(&t) + 5 == secondsToStop) {
+                    thread(&Camera::record, this);
+                    recordNext = true;
+                }
+                if (!IsInRunningList(to_string(this->ID))) {
+                    addRunningCamera(to_string(this->ID));
+                }
+                av_free_packet(&packet); // clear the packet
+                av_init_packet(&packet); // init the packet
+            }
+            av_write_trailer(oc); // write the trailer in the out file
+            // ---------- CLEANUP ---------- //
+            avio_closep(&oc->pb);
+            avformat_free_context(oc);
+            av_free_packet(&packet);
+            avformat_close_input(&context);
+            // ----------------------------- //
+        }
     }
 }
 

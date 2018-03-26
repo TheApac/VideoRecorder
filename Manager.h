@@ -28,7 +28,6 @@ public:
 private:
     void CameraOver(int &enregistrable);
     vector<Camera*> CameraList; /* Save each camera in a vector to run their record function after they all have been initialized */
-    vector<string> CrashedCameraList; // Vector that store which camera crashed when
     // Keep the value of the camera fields while creating them
     int nbdays;
     string path;
@@ -36,10 +35,9 @@ private:
     string log;
     string password;
     string url;
-    int nbSecBetweenRecords;
+    int nbSecBetweenRecords = -1;
     int ID;
-    bool didCameraCrash(int ID);
-    void removeOldCrashedCameras();
+    void updateTime();
 };
 
 #endif /* MANAGER_H */

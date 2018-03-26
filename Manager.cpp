@@ -25,19 +25,22 @@
 
 using namespace boost;
 
-static mutex mutex_crashed;
 static mutex mutex_camlist;
 
 Manager::Manager() {
-    deamonize();
+    //deamonize();
     if (isRunningManager()) {
         exit(0);
     }
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    string runfileName = directoryOfFiles + "/.RunningVideoRecorder";
+    remove(runfileName.c_str());
+    ofstream runfile(runfileName);
+    runfile << currentDate() << endl;
     name = "", log = "", password = "", url = "", path = "";
     ID = -1;
-    nbdays = DEFAULT_DAYS_TO_KEEP;
+    nbdays = -1;
     bool firstCamera = true; // Prevent a bug for the start of the first camera
     string location = "";
     int enregistrable = -1;
@@ -54,8 +57,10 @@ Manager::Manager() {
     }
     string line;
     regex ChangeCam("^\\[CAMERA");
+
     try {
         while (std::getline(file, line)) { // iterate through each line of the configuration file
+
             ++nbLinesRead; // used to display which line has a problem
             if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
                 string parameterName = line.substr(0, line.find_first_of("="));
@@ -106,7 +111,6 @@ Manager::Manager() {
                         throw DuplicateField("Path");
                     }
                 } else if (parameterName == "NbJourStock") {
-                    string parameterValue = parameterValue;
                     if (isOnlyNumeric(parameterValue)) { //check if the number of days to keep is a positive integer
                         if (nbdays == -1) {
                             nbdays = atoi(parameterValue.c_str());
@@ -133,7 +137,7 @@ Manager::Manager() {
                         if (this->nbSecBetweenRecords != -1) {
                             throw DuplicateField("Number of seconds between record");
                         } else {
-                            this->nbSecBetweenRecords = parameterValue;
+                            this->nbSecBetweenRecords = atoi(parameterValue.c_str());
                         }
                     }
                 }
@@ -161,6 +165,9 @@ Manager::Manager() {
 }
 
 void Manager::CameraOver(int &enregistrable) {
+    if (nbdays == -1) {
+        nbdays = DEFAULT_DAYS_TO_KEEP;
+    }
     if (ID != -1 && name != "" && log != "" && password != "" && url != "" && enregistrable != -1) {
         // Make sure there is not two cameras with the same ID
         for (Camera* camera : CameraList) {
@@ -203,6 +210,10 @@ Manager::~Manager() {
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string toRemove = directoryOfFiles + "/.RunningVideoRecorder";
     remove(toRemove.c_str());
+    for (Camera* camera : CameraList) {
+        delete camera;
+    }
+    CleanUpNodes();
 }
 
 /* Start to record each cameras
@@ -216,59 +227,38 @@ void Manager::startRecords() {
         sleep(nbSecBetweenRecords);
     }
     sleep(30);
-    struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    string file = directoryOfFiles + "/.RunningVideoRecorder";
+    thread(&Manager::updateTime, this);
     while (1) {
         removeOldCrashedCameras();
         for (Camera *camera : CameraList) {
             if (!IsInRunningList(to_string(camera->GetID()))) {
                 thread(&Camera::record, camera);
                 if (!didCameraCrash(camera->GetID())) {
-                    mutex_crashed.lock();
-                    CrashedCameraList.push_back(to_string(camera->GetID()) + "-" + currentDate());
-                    mutex_crashed.unlock();
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
+                    addCrashedCamera(camera->GetID());
+                } else {
+                    if (timeSinceCrashCamera(camera->GetID()) > 10 * 60) { // Don't send 2 mails in less than 10 min
+                        sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
+                    }
                 }
                 sleep(nbSecBetweenRecords);
             } else {
                 deleteNode(to_string(camera->GetID()));
             }
         }
+        sleep(60);
+    }
+}
+
+void Manager::updateTime() {
+    struct passwd *pw = getpwuid(getuid());
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    string file = directoryOfFiles + "/.RunningVideoRecorder";
+    while (1) {
         remove(file.c_str());
         ofstream runfile(file);
         runfile << currentDate() << endl;
         runfile.close();
         sleep(30);
     }
-}
-
-void Manager::removeOldCrashedCameras() {
-    mutex_crashed.lock();
-    vector<string> CrashedCameraListCopy = CrashedCameraList;
-    int index = 0;
-    for (string cameraInfo : CrashedCameraList) {
-        if (secondsSinceDate(cameraInfo.substr(cameraInfo.find_first_of('-') + 1)) > 10 * 60) {
-            CrashedCameraListCopy.erase(CrashedCameraListCopy.begin() + index);
-        }
-        ++index;
-    }
-    CrashedCameraList = CrashedCameraListCopy;
-    mutex_crashed.unlock();
-}
-
-bool Manager::didCameraCrash(int ID) {
-    mutex_crashed.lock();
-    int index = 0;
-    if (CrashedCameraList.size() > 0) {
-        while (index != CrashedCameraList.size()) {
-            if (CrashedCameraList[index].substr(0, CrashedCameraList[index].find_first_of('-')) == to_string(ID)) {
-                mutex_crashed.unlock();
-                return true;
-            }
-            ++index;
-        }
-    }
-    mutex_crashed.unlock();
-    return false;
 }
