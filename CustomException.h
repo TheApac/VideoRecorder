@@ -68,5 +68,10 @@ public:
     DuplicateID(std::string const& msg); /* Exception to throw when one of the configuration files is not found */
 };
 
+class InvalidNbMin : public CustomException {
+public:
+    InvalidNbMin(std::string const& msg); /* Exception to throw when one of the configuration parameter for minutes is not a positive integer */
+};
+
 #endif /* CUSTOMEXCEPTION_H */
 

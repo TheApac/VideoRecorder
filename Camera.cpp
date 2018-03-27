@@ -5,8 +5,6 @@
  * Created on 3 janvier 2018, 10:21
  */
 
-#include <cstdio>
-#include <stdlib.h>
 #include <sys/stat.h>
 #include <string>
 #include <unistd.h>
@@ -21,12 +19,13 @@ extern "C" {
 #include <libavformat/avformat.h>
 }
 #include <boost/thread.hpp>
+
 using namespace std;
 using namespace boost;
 
 Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url) {
     if (SecondsToRecord == -1) {
-        SecondsToRecord = 30; //DEFAULT_TIME_RECORDS; // 900 (15 * 60) : Default time 15 minutes
+        SecondsToRecord = DEFAULT_TIME_RECORDS; // 900 (15 * 60) : Default time 15 minutes
     }
     if (path.at(path.length() - 1) == '/') { // add a "/" at the end of the path if there is none
         this->directory = path;
@@ -39,12 +38,30 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
     this->log = log;
     this->password = password;
     this->url = url;
-    this->timeOfLastCrash = "1900:01:01:00:00:00";
+}
+
+Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& password, string& url) {
+    if (SecondsToRecord == -1) {
+        SecondsToRecord = DEFAULT_TIME_RECORDS; // 900 (15 * 60) : Default time 15 minutes
+    }
+    if (tempPath.at(tempPath.length() - 1) == '/') { // add a "/" at the end of the path if there is none
+        this->directory = tempPath;
+    } else {
+        this->directory = tempPath + "/";
+    }
+    this->nbdays = -1;
+    this->ID = ID;
+    this->name = name;
+    this->log = log;
+    this->password = password;
+    this->url = url;
 }
 
 void Camera::record() {
     string destinationDirectory = createDirectoryVideos(this->directory);
-    removeOldFile(1, this->directory);
+    if (nbdays != -1) {
+        thread(removeOldFile, nbdays, this->directory);
+    }
     string link = "rtsp://" + this->log + ":" + this->password + "@" + this->url;
     int video_stream_index; // keep the index of the video stream
     AVFormatContext* context = avformat_alloc_context();
@@ -72,15 +89,15 @@ void Camera::record() {
     }
     if (!error) {
         for (int i = 0; i < context->nb_streams; i++) { //search video stream
-            if (context->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+            if (context->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
                 video_stream_index = i;
+            }
         }
         AVOutputFormat* fmt = av_guess_format(NULL, "sample.mp4", NULL); //create format for given file
         AVFormatContext* oc = avformat_alloc_context();
         oc->oformat = fmt;
         string fullName = destinationDirectory + getFileName();
         avio_open2(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE, NULL, NULL); //open output file
-
         AVStream* stream = NULL;
         stream = avformat_new_stream(oc, context->streams[video_stream_index]->codec->codec); // save which stream to mux
         avcodec_copy_context(stream->codec, context->streams[video_stream_index]->codec); // set infos to the camera's ones
@@ -93,7 +110,6 @@ void Camera::record() {
             bool recordNext = false; // start only one other recording
             time_t t = time(0);
             long int secondsToStop = time(&t) + SecondsToRecord; // save when to stop recording this video
-
             while (time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
                 if (av_read_frame(context, &packet) < 0) {
                     if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min

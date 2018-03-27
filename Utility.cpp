@@ -24,6 +24,7 @@ boost::mutex mutex_crashed;
 
 
 using namespace std;
+using namespace boost;
 
 string mailContent = "";
 string loginSMTP = "";
@@ -402,8 +403,12 @@ string currentDate() {
     return date;
 }
 
-void setLocation(string location) {
-    SiteLocation = location;
+bool setLocation(string location) {
+    if (SiteLocation == "") {
+        SiteLocation = location;
+        return true;
+    }
+    return false;
 }
 
 void addRunningCamera(string ID) {
@@ -538,5 +543,102 @@ void addCrashedCamera(int ID) {
         mutex_crashed.lock();
         CrashedCameraList.push_back(to_string(ID) + "-" + currentDate());
         mutex_crashed.unlock();
+    }
+}
+
+void startMoveFromBuffer(int nbdays, int nbMin) {
+    for (bufferDir* buffer : bufferDirList) {
+        thread(MoveForEachDir, buffer->defDir, nbdays, nbMin);
+    }
+}
+
+void MoveForEachDir(string defDir, int nbdays, int nbMin) {
+    map<int, string> bufferMap;
+    for (bufferDir* buf : bufferDirList) {
+        if (buf->defDir == defDir) {
+            bufferMap = buf->listBuffer;
+        }
+    }
+    while (1) {
+        thread(removeOldFile, nbdays, defDir);
+        for (auto const &buff : bufferMap) {
+            moveFromBufferMemory(defDir, buff.second, buff.first);
+        }
+        sleep(nbMin * 60);
+    }
+}
+
+void moveFromBufferMemory(string& defDir, string tempDir, int IDCam) {
+    DIR * dir;
+    DIR * datedir;
+    DIR * hourDir;
+    string dateDirName;
+    string hourDirName;
+    struct dirent *entR;
+    struct dirent *entD;
+    struct dirent *entH;
+    string oldName;
+    string newName;
+    dir = opendir(tempDir.c_str());
+    while (entR = readdir(dir)) { //read "root" directory
+        if (strcmp(entR->d_name, ".") == 0 || strcmp(entR->d_name, "..") == 0) {
+            continue; //Do not iterate on current and parent directories
+        }
+        if (entR->d_type == DT_DIR) {
+            dateDirName = tempDir + entR->d_name;
+            datedir = opendir(dateDirName.c_str());
+            while (entD = readdir(datedir)) { // read "date" directory
+                if (strcmp(entD->d_name, ".") == 0 || strcmp(entD->d_name, "..") == 0) {
+                    continue; //Do not iterate on current and parent directories
+                }
+                if (entD->d_type == DT_DIR) {
+                    hourDirName = tempDir + entR->d_name + "/" + entD->d_name;
+                    hourDir = opendir(hourDirName.c_str());
+                    while (entH = readdir(hourDir)) { // read "hour" directory
+                        if (strcmp(entH->d_name, ".") == 0 || strcmp(entH->d_name, "..") == 0) {
+                            continue; //Do not iterate on current and parent directories
+                        }
+                        if (string(entH->d_name).substr(1, (string(entH->d_name).find_first_of("-") - 1)) == to_string(IDCam)) {
+                            oldName = tempDir + entR->d_name + "/" + entD->d_name + "/" + entH->d_name;
+                            newName = defDir + entR->d_name + "/" + entD->d_name + "/" + entH->d_name;
+                            mkdir(defDir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+                            string defdirR = defDir + entR->d_name + "/";
+                            mkdir(defdirR.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+                            string defdirD = defdirR + entD->d_name + "/";
+                            mkdir(defdirD.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+                            rename(oldName.c_str(), newName.c_str());
+                        }
+                    }
+                    closedir(hourDir);
+                }
+            }
+            closedir(datedir);
+        }
+    }
+    closedir(dir);
+}
+
+void addBufferDir(int nbmin, string defDir, string tempDir, int IDCam) {
+    if (defDir.at(defDir.length() - 1) != '/') { // add a "/" at the end of the path if there is none
+        defDir = defDir + "/";
+    }
+    if (tempDir.at(tempDir.length() - 1) != '/') { // add a "/" at the end of the path if there is none
+        tempDir = tempDir + "/";
+    }
+    bool found = false;
+    for (bufferDir* bufferdirs : bufferDirList) {
+        if (bufferdirs->defDir == defDir) {
+            found = true;
+            bufferdirs->nbMin = nbmin;
+            bufferdirs->listBuffer[IDCam] = tempDir;
+            break;
+        }
+    }
+    if (!found) {
+        bufferDir *temp = new bufferDir;
+        temp->defDir = defDir;
+        temp->nbMin = nbmin;
+        temp->listBuffer[IDCam] = tempDir;
+        bufferDirList.push_back(temp);
     }
 }

@@ -14,46 +14,46 @@
 #include "Watchdog.h"
 #include "Utility.h"
 #include "Manager.h"
-#include "CustomException.h"
-#include <signal.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <fstream>
 
 Watchdog::Watchdog() {
-    //deamonize();
+    deamonize();
     sleep(60);
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string fileName = directoryOfFiles + "/.RunningVideoRecorder";
     string line = "";
-    char hostname[128] = "";
     while (1) {
-        ifstream file(fileName);
         if (fileExists(fileName)) {
+            ifstream file(fileName);
             if (file.is_open()) {
                 getline(file, line);
                 if (secondsSinceDate(line) > 60) {
-                    gethostname(hostname, sizeof (hostname));
-                    sendEmail("Le manager du serveur " + string(hostname) + " ne répondait plus");
+                    sendEmail("Le manager du serveur ne répondait plus");
                     Camera::reinitTimeRecord();
                     pid_t pid = fork();
                     if (pid == 0) {
                         remove(fileName.c_str());
                         Manager *manager = new Manager();
                         manager->startRecords();
+                        exit(EXIT_SUCCESS);
                     }
                 }
             }
+            file.close();
         } else {
             pid_t pid = fork();
             if (pid == 0) {
+                sendEmail("Le manager du serveur n'a pas démarré");
+                remove(fileName.c_str());
                 Manager *manager = new Manager();
                 manager->startRecords();
+                exit(EXIT_SUCCESS);
             }
         }
         line = "";
-        file.close();
         sleep(60);
     }
 }

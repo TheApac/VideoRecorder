@@ -25,6 +25,7 @@ using namespace std;
 class Camera {
 public:
     Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url);
+    Camera(string& tempPath, int& ID, string& name, string& log, string& password, string& url);
     virtual ~Camera();
     int GetID() const;
 
@@ -50,6 +51,7 @@ public:
 private:
     volatile static int SecondsToRecord; /* Positive integer \n\n Number of seconds of each recording */
     string directory; /* Directory where records will be saved */
+    string tempDirectory; /* Buffer memory where records will be saved */
     int nbdays; /* Positive integer \n\n Number of days to keep the records */
     int ID; /* Positive integer \n\n ID of the camera */
     string name; /* Name of the camera */

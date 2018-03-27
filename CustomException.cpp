@@ -47,3 +47,6 @@ FileNotFound::FileNotFound(std::string const &msg) : CustomException("File not f
 
 DuplicateID::DuplicateID(std::string const &msg) : CustomException("The ID : " + msg + " is used twice") {
 }
+
+InvalidNbMin::InvalidNbMin(std::string const &msg) : CustomException("Invalid number of minutes : " + msg + " should be a positive integer") {
+}

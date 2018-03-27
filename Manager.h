@@ -31,6 +31,8 @@ private:
     // Keep the value of the camera fields while creating them
     int nbdays;
     string path;
+    string tempPath;
+    int nbMinBetweenMoveBuffer;
     string name;
     string log;
     string password;

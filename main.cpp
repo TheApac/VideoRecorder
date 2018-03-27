@@ -12,16 +12,9 @@
  */
 #include "Utility.h"
 #include "Manager.h"
-#include "CustomException.h"
 #include "Watchdog.h"
 #include <iostream>
-extern "C" {
-#include <sodium.h>
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-}
 #include <unistd.h>
-#include <fstream>
 #include <pwd.h>
 #include <string.h>
 
@@ -39,10 +32,16 @@ int main() {
     }
     pid_t pid = fork();
     if (pid == 0) {
-        Watchdog *watchdog = new Watchdog();
-    } else {
         Manager *manager = new Manager();
-        manager->startRecords();
-        delete manager;
+        if (manager) {
+            pid_t pid = fork();
+            if (pid == 0) {
+                Watchdog *watchdog = new Watchdog();
+                delete watchdog;
+            } else {
+                manager->startRecords();
+                delete manager;
+            }
+        }
     }
 }

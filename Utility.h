@@ -20,6 +20,7 @@
 #define TO_MAIL   "Notified person " TO_ADDR
 #include <string>
 #include <vector>
+#include <map>
 
 #define DEFAULT_TIME_BETWEEN_RECORDS 30
 #define DEFAULT_TIME_RECORDS 900
@@ -36,13 +37,23 @@ struct node_t {
     struct node_t* next;
 };
 
+struct bufferDir {
+    int nbMin;
+    string defDir;
+    map<int, string> listBuffer;
+};
+
+static vector<bufferDir*> bufferDirList;
+void startMoveFromBuffer(int nbdays, int nbMin);
+void MoveForEachDir(string defDir, int nbdays, int nbMin);
+void addBufferDir(int nbmin, string defDir, string tempDir, int ID);
 static vector<string> CrashedCameraList; // Vector that store which camera crashed when
 static struct node_t* RunningCameraList; // keep the cameras running
 int getRunningCameraSize(/*node_t** head*/);
 bool IsInRunningList(/*node_t** head, */string ID);
 void deleteNode(string valueToDelete);
 void addRunningCamera(/*node_t** head, */string ID);
-bool isOnlyNumeric(string &str); // Return true if the string represent a positive integer, else return false
+bool isOnlyNumeric(string & str); // Return true if the string represent a positive integer, else return false
 int sendEmail(string messageContent); // send an email containing the parameter
 static string defineDate(); // Retuen the date on the format of the email parameter
 void deamonize(); // Self explaining
@@ -51,17 +62,18 @@ static int timeSinceDate(string dateToCompare); // return the number of days sin
 static void removeContentOfDirectory(string path, bool exact); // remove every files in a directory (recursive)
 int removeOldFile(int nbDays, string path); // remove the files that are older than the maximum time to keep
 int configureSMTP();
-bool fileExists(const string& name);
+bool fileExists(const string & name);
 string currentDate();
 int secondsSinceDate(string dateToCompare);
-void setLocation(string location);
+bool setLocation(string location);
 bool isRunningManager();
 void CleanUpNodes();
-static void CleanUpNodesRec(node_t* head);
+static void CleanUpNodesRec(node_t * head);
 bool didCameraCrash(int ID);
 void removeOldCrashedCameras();
 int timeSinceCrashCamera(int IDCam);
 void addCrashedCamera(int ID);
+void moveFromBufferMemory(string &defDir, string tempDir, int IDCam);
 
 #endif /* UTILITY_H */
 
