@@ -22,7 +22,6 @@
 boost::mutex v_mutex;
 boost::mutex mutex_crashed;
 
-
 using namespace std;
 using namespace boost;
 
@@ -168,8 +167,7 @@ int sendEmail(string messageContent) {
          * To: addresse in the header */
         recipients = curl_slist_append(recipients, TO_ADDR);
         curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
-        /* We're using a callback function to specify the payload (the headers and
-         * body of the message).*/
+        /* Callback function to specify the payload (the headers and body of the message).*/
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, payload_source);
         curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
         curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
@@ -250,7 +248,7 @@ static int timeSinceDate(string dateToCompare) {
     return difference;
 }
 
-/* Calculate the number of seconds ellapsed since a date formated as "YYYY:MM:DD" */
+/* Calculate the number of seconds ellapsed since a date formated as "YYYY:MM:DD:HH:MM:SS" */
 int secondsSinceDate(string dateToCompare) {
     time_t rawtime;
     struct tm* timeinfo;
@@ -262,6 +260,26 @@ int secondsSinceDate(string dateToCompare) {
     timeinfo->tm_hour = atoi(dateToCompare.substr(11, 13).c_str());
     timeinfo->tm_min = atoi(dateToCompare.substr(14, 16).c_str());
     timeinfo->tm_sec = atoi(dateToCompare.substr(17).c_str());
+    time_t x = mktime(timeinfo); // create a time_t struct from the timeinfo
+    time_t raw_time = time(NULL); // create a time_t struct with current time
+    time_t y = mktime(localtime(&raw_time));
+    double difference = difftime(y, x); // calculate the number of ms between two dates, convert it in days
+    return difference;
+}
+
+/* Calculate the number of seconds ellapsed since a file was recorded */
+int secondsSinceRecord(string fileName) {
+    fileName = fileName.substr(fileName.find_first_of("-") + 1);
+    time_t rawtime;
+    struct tm* timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime); // create a time structure
+    timeinfo->tm_year = atoi(fileName.substr(0, 4).c_str()) - 1900;
+    timeinfo->tm_mon = atoi(fileName.substr(4, 2).c_str()) - 1;
+    timeinfo->tm_mday = atoi(fileName.substr(6, 2).c_str());
+    timeinfo->tm_hour = atoi(fileName.substr(9, 2).c_str());
+    timeinfo->tm_min = atoi(fileName.substr(11, 2).c_str());
+    timeinfo->tm_sec = atoi(fileName.substr(13, 2).c_str());
     time_t x = mktime(timeinfo); // create a time_t struct from the timeinfo
     time_t raw_time = time(NULL); // create a time_t struct with current time
     time_t y = mktime(localtime(&raw_time));
@@ -336,6 +354,7 @@ int configureSMTP() {
         cerr << directoryOfFiles << "/ConfigFiles/2NWatchDog.ini was not found" << endl;
     }
     string line;
+    //iterate through the file while the configuration isn't over
     while (getline(file, line) && (urlSMTP == "" || loginSMTP == "" || passwordSMTP == "")) {
         if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
             string parameterName = line.substr(0, line.find_first_of("="));
@@ -403,6 +422,7 @@ string currentDate() {
     return date;
 }
 
+/* Saves the geo location of the manager for the emails */
 bool setLocation(string location) {
     if (SiteLocation == "") {
         SiteLocation = location;
@@ -436,12 +456,12 @@ int getRunningCameraSize() {
 bool IsInRunningList(string ID) {
     v_mutex.lock();
     struct node_t *nodeSearch = nullptr;
-    nodeSearch = RunningCameraList;
+    nodeSearch = RunningCameraList; // save the head of the list
     if (nodeSearch == NULL) {
         v_mutex.unlock();
         return false;
     }
-    while (nodeSearch->value != ID && nodeSearch->next != NULL) {
+    while (nodeSearch->value != ID && nodeSearch->next != NULL) { // While the node hasn't been found
         nodeSearch = nodeSearch->next;
     }
     bool returnValue = false;
@@ -483,10 +503,12 @@ bool isRunningManager() {
     return false;
 }
 
+/* Delete each node of a singly linked list */
 void CleanUpNodes() {
     CleanUpNodesRec(RunningCameraList);
 }
 
+/* Recursive delete of the nodes */
 void CleanUpNodesRec(node_t* head) {
     if (head->next) {
         CleanUpNodesRec(head->next);
@@ -497,12 +519,13 @@ void CleanUpNodesRec(node_t* head) {
 void removeOldCrashedCameras() {
     mutex_crashed.lock();
     vector<string> CrashedCameraListCopy = CrashedCameraList;
-    int index = 0;
+    int index = 0; //keep the position of the camera
     for (string cameraInfo : CrashedCameraListCopy) {
-        if (secondsSinceDate(cameraInfo.substr(cameraInfo.find_first_of('-') + 1)) > 10 * 60) {
+        if (secondsSinceDate(cameraInfo.substr(cameraInfo.find_first_of('-') + 1)) > 10 * 60) { // Erease if the camera crashed more than 10 minutes ago
             CrashedCameraListCopy.erase(CrashedCameraListCopy.begin() + index);
+        } else { //Stay at the index if a delete was made
+            ++index;
         }
-        ++index;
     }
     CrashedCameraList = CrashedCameraListCopy;
     mutex_crashed.unlock();
@@ -514,7 +537,7 @@ bool didCameraCrash(int ID) {
     while (index != CrashedCameraList.size()) {
         if (CrashedCameraList[index].substr(0, CrashedCameraList[index].find_first_of('-')) == to_string(ID)) {
             mutex_crashed.unlock();
-            return true;
+            return true; // If the camera is found, exit the function
         }
         ++index;
     }
@@ -523,19 +546,18 @@ bool didCameraCrash(int ID) {
 }
 
 int timeSinceCrashCamera(int IDCam) {
-    if (!didCameraCrash(IDCam)) {
+    if (!didCameraCrash(IDCam)) { // If it never crashed, return a large number
         return 9999999;
     }
-    int nbSecondsSinceCrash = 0;
     mutex_crashed.lock();
     int index = 0;
-    while (index != CrashedCameraList.size()) {
-        if (CrashedCameraList.at(index).substr(0, CrashedCameraList.at(index).find_first_of('-')) == to_string(IDCam)) {
-            nbSecondsSinceCrash = secondsSinceDate(CrashedCameraList.at(index).substr(CrashedCameraList.at(index).find_first_of('-') + 1));
+    while (index != CrashedCameraList.size()) { // iterate through the list
+        if (CrashedCameraList.at(index).substr(0, CrashedCameraList.at(index).find_first_of('-')) == to_string(IDCam)) { // if good camera
+            mutex_crashed.unlock();
+            return secondsSinceDate(CrashedCameraList.at(index).substr(CrashedCameraList.at(index).find_first_of('-') + 1)); // return the number of second since crash
         }
+        ++index;
     }
-    mutex_crashed.unlock();
-    return nbSecondsSinceCrash;
 }
 
 void addCrashedCamera(int ID) {
@@ -546,27 +568,34 @@ void addCrashedCamera(int ID) {
     }
 }
 
-void startMoveFromBuffer(int nbdays, int nbMin) {
+void startMoveFromBuffer(int nbdays) {
     for (bufferDir* buffer : bufferDirList) {
-        thread(MoveForEachDir, buffer->defDir, nbdays, nbMin);
+        thread(MoveForEachDir, buffer->defDir, nbdays); // Start a thread for each final directory
     }
 }
 
-void MoveForEachDir(string defDir, int nbdays, int nbMin) {
+void MoveForEachDir(string defDir, int nbdays) {
     map<int, string> bufferMap;
-    for (bufferDir* buf : bufferDirList) {
-        if (buf->defDir == defDir) {
+    int nbMin;
+    for (bufferDir* buf : bufferDirList) { // Iterate to find the good bufferDir
+        if (buf->defDir == defDir) { // Saves the infos
             bufferMap = buf->listBuffer;
+            nbMin = buf->nbMin;
         }
     }
-    while (1) {
+    while (1) { // every nbMin, move the files recorded from the right cam from each tempDir in the bufferMap to defDir
         thread(removeOldFile, nbdays, defDir);
         for (auto const &buff : bufferMap) {
-            moveFromBufferMemory(defDir, buff.second, buff.first);
+            moveFromBufferMemory(defDir, buff.second, buff.first); // buff.first : IDCam, buff.second : tempDir
         }
         sleep(nbMin * 60);
     }
 }
+
+class Camera {
+public:
+    static volatile int GetSecondsToRecord();
+};
 
 void moveFromBufferMemory(string& defDir, string tempDir, int IDCam) {
     DIR * dir;
@@ -581,41 +610,50 @@ void moveFromBufferMemory(string& defDir, string tempDir, int IDCam) {
     string newName;
     dir = opendir(tempDir.c_str());
     while (entR = readdir(dir)) { //read "root" directory
-        if (strcmp(entR->d_name, ".") == 0 || strcmp(entR->d_name, "..") == 0) {
+        if (strcmp(entR->d_name, ".") == 0 || strcmp(entR->d_name, "..") == 0 || string(entR->d_name).substr(0, 2) != "20") {
             continue; //Do not iterate on current and parent directories
         }
-        if (entR->d_type == DT_DIR) {
-            dateDirName = tempDir + entR->d_name;
-            datedir = opendir(dateDirName.c_str());
-            while (entD = readdir(datedir)) { // read "date" directory
-                if (strcmp(entD->d_name, ".") == 0 || strcmp(entD->d_name, "..") == 0) {
-                    continue; //Do not iterate on current and parent directories
-                }
-                if (entD->d_type == DT_DIR) {
-                    hourDirName = tempDir + entR->d_name + "/" + entD->d_name;
-                    hourDir = opendir(hourDirName.c_str());
-                    while (entH = readdir(hourDir)) { // read "hour" directory
-                        if (strcmp(entH->d_name, ".") == 0 || strcmp(entH->d_name, "..") == 0) {
-                            continue; //Do not iterate on current and parent directories
-                        }
-                        if (string(entH->d_name).substr(1, (string(entH->d_name).find_first_of("-") - 1)) == to_string(IDCam)) {
-                            oldName = tempDir + entR->d_name + "/" + entD->d_name + "/" + entH->d_name;
-                            newName = defDir + entR->d_name + "/" + entD->d_name + "/" + entH->d_name;
-                            mkdir(defDir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-                            string defdirR = defDir + entR->d_name + "/";
-                            mkdir(defdirR.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-                            string defdirD = defdirR + entD->d_name + "/";
-                            mkdir(defdirD.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-                            rename(oldName.c_str(), newName.c_str());
+        if (fileExists(tempDir + entR->d_name)) { // Prevent caching problems
+            if (entR->d_type == DT_DIR) { // Iterate in subdirectories only
+                dateDirName = tempDir + entR->d_name; // root/YYYY.MM.DD
+                datedir = opendir(dateDirName.c_str());
+                while (entD = readdir(datedir)) { // read "date" directory
+                    if (strcmp(entD->d_name, ".") == 0 || strcmp(entD->d_name, "..") == 0 || string(entD->d_name).substr(0, 1) != "H") {
+                        continue; //Do not iterate on current and parent directories
+                    }
+                    if (fileExists(tempDir + entR->d_name + "/" + entD->d_name)) {
+                        if (entD->d_type == DT_DIR) { // Iterate in subdirectories only
+                            hourDirName = tempDir + entR->d_name + "/" + entD->d_name; // root/YYYY.MM.DD/HX
+                            hourDir = opendir(hourDirName.c_str());
+                            while (entH = readdir(hourDir)) { // read "hour" directory
+                                if (strcmp(entH->d_name, ".") == 0 || strcmp(entH->d_name, "..") == 0 || string(entH->d_name).substr(0, 1) != "C") {
+                                    continue; //Do not iterate on current and parent directories
+                                }
+                                if (string(entH->d_name).substr(1, (string(entH->d_name).find_first_of("-") - 1)) == to_string(IDCam)) {
+                                    if (secondsSinceRecord(entH->d_name) > Camera::GetSecondsToRecord() + 30) {
+                                        oldName = tempDir + entR->d_name + "/" + entD->d_name + "/" + entH->d_name; // tempDir/YYYY.MM.DD/HX/C(IDCam)-YYYYMMDDD-HHmmssmmm.mp4
+                                        newName = defDir + entR->d_name + "/" + entD->d_name + "/" + entH->d_name; // defDir/YYYY.MM.DD/HX/C(IDCam)-YYYYMMDDD-HHmmssmmm.mp4
+                                        mkdir(defDir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create the dir if it doesn't exist
+                                        string defdirR = defDir + entR->d_name + "/";
+                                        mkdir(defdirR.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+                                        string defdirD = defdirR + entD->d_name + "/";
+                                        mkdir(defdirD.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+                                        rename(oldName.c_str(), newName.c_str()); // move the file
+                                    }
+                                }
+                            }
+                            closedir(hourDir); // prevent memory leak
+                            rmdir(hourDirName.c_str()); //remove directory if empty
                         }
                     }
-                    closedir(hourDir);
+
                 }
+                closedir(datedir); // prevent memory leak
+                rmdir(dateDirName.c_str()); //remove directory if empty
             }
-            closedir(datedir);
         }
     }
-    closedir(dir);
+    closedir(dir); // prevent memory leak
 }
 
 void addBufferDir(int nbmin, string defDir, string tempDir, int IDCam) {
@@ -626,19 +664,18 @@ void addBufferDir(int nbmin, string defDir, string tempDir, int IDCam) {
         tempDir = tempDir + "/";
     }
     bool found = false;
-    for (bufferDir* bufferdirs : bufferDirList) {
+    for (bufferDir* bufferdirs : bufferDirList) { // try to find if an item exist for defDir
         if (bufferdirs->defDir == defDir) {
             found = true;
-            bufferdirs->nbMin = nbmin;
-            bufferdirs->listBuffer[IDCam] = tempDir;
+            bufferdirs->listBuffer[IDCam] = tempDir; // update its map
             break;
         }
     }
-    if (!found) {
+    if (!found) { // don't add it if exist
         bufferDir *temp = new bufferDir;
         temp->defDir = defDir;
         temp->nbMin = nbmin;
         temp->listBuffer[IDCam] = tempDir;
-        bufferDirList.push_back(temp);
+        bufferDirList.push_back(temp); // Add a new item for defDir
     }
 }

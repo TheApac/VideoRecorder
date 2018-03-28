@@ -24,30 +24,25 @@ using namespace std;
 
 class Camera {
 public:
-    Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url);
-    Camera(string& tempPath, int& ID, string& name, string& log, string& password, string& url);
+    Camera(string& path, int& nbdays, int& ID, string& name, string& log, string& password, string& url); // With a definitive directory
+    Camera(string& tempPath, int& ID, string& name, string& log, string& password, string& url); // With a buffer directory
     virtual ~Camera();
+
     int GetID() const;
-
     string GetDirectory() const;
-
     string GetLog() const;
-
     string GetName() const;
-
     int GetNbdays() const;
-
     string GetPassword() const;
-
     string GetUrl() const;
 
     void record();
 
-    static bool setSecondsToRecord(int sec);
+    static bool setSecondsToRecord(int sec); // Set the time to record for each camera, return false if already set
+    static void reinitTimeRecord(); // Set the time to record to -1
+    static volatile int GetSecondsToRecord();
 
-    static void reinitTimeRecord();
-
-    string getFileName();
+    string getFileName(); // Returns the filename, according to the ID, current date and time
 private:
     volatile static int SecondsToRecord; /* Positive integer \n\n Number of seconds of each recording */
     string directory; /* Directory where records will be saved */

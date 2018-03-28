@@ -22,9 +22,10 @@
 #include <vector>
 #include <map>
 
-#define DEFAULT_TIME_BETWEEN_RECORDS 30
-#define DEFAULT_TIME_RECORDS 900
-#define DEFAULT_DAYS_TO_KEEP 30
+#define DEFAULT_TIME_BETWEEN_RECORDS 30 // seconds to wait for each camera after the previous one
+#define DEFAULT_TIME_RECORDS 900 // seconds to record by default
+#define DEFAULT_DAYS_TO_KEEP 30 // numbers of day before a file must be deleted
+#define DEFAULT_TIME_BUFFER_MOVE 3600 // number of seconds before the process move the recorded files
 
 using namespace std;
 
@@ -43,9 +44,9 @@ struct bufferDir {
     map<int, string> listBuffer;
 };
 
-static vector<bufferDir*> bufferDirList;
-void startMoveFromBuffer(int nbdays, int nbMin);
-void MoveForEachDir(string defDir, int nbdays, int nbMin);
+static vector<bufferDir*> bufferDirList; // Keep info for each final directories
+void startMoveFromBuffer(int nbdays);
+void MoveForEachDir(string defDir, int nbdays);
 void addBufferDir(int nbmin, string defDir, string tempDir, int ID);
 static vector<string> CrashedCameraList; // Vector that store which camera crashed when
 static struct node_t* RunningCameraList; // keep the cameras running
@@ -61,19 +62,20 @@ string createDirectoryVideos(string rootDirectory); // Create a subdirectory (an
 static int timeSinceDate(string dateToCompare); // return the number of days since a date
 static void removeContentOfDirectory(string path, bool exact); // remove every files in a directory (recursive)
 int removeOldFile(int nbDays, string path); // remove the files that are older than the maximum time to keep
-int configureSMTP();
-bool fileExists(const string & name);
-string currentDate();
-int secondsSinceDate(string dateToCompare);
-bool setLocation(string location);
-bool isRunningManager();
-void CleanUpNodes();
-static void CleanUpNodesRec(node_t * head);
-bool didCameraCrash(int ID);
-void removeOldCrashedCameras();
-int timeSinceCrashCamera(int IDCam);
-void addCrashedCamera(int ID);
-void moveFromBufferMemory(string &defDir, string tempDir, int IDCam);
+int configureSMTP(); // configure the SMTP for curl to send mails
+bool fileExists(const string & name); // check if the file at the path "name" exists
+string currentDate(); // return the current date at the format "YYYY:MM:DD:HH::mm::ss"
+int secondsSinceDate(string dateToCompare); /* Calculate the number of seconds ellapsed since a date formated as "YYYY:MM:DD:HH:MM:SS" */
+bool setLocation(string location); /* Saves the geo location of the manager for the emails */
+bool isRunningManager(); /* Check if there is not already a manager running */
+void CleanUpNodes(); // Delete each node of a singly linked list
+static void CleanUpNodesRec(node_t * head); /* Recursive delete of the nodes */
+bool didCameraCrash(int ID); // Check if the camera of ID given in parameter crashed less than 10minutes ago
+void removeOldCrashedCameras(); // Remove from the crashed camera list, the ones that crashed more than 10min ago
+int timeSinceCrashCamera(int IDCam); // Return the number of seconds since the camera of ID IDCam crashed
+void addCrashedCamera(int ID); // Add a camera to the list, with the time it crashed
+void moveFromBufferMemory(string &defDir, string tempDir, int IDCam); // Move every file saved by camera IDCam from tempDir to defDir
+int secondsSinceRecord(string fileName); // Return the number of seconds since the file was recorded
 
 #endif /* UTILITY_H */
 

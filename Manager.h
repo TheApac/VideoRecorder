@@ -39,7 +39,7 @@ private:
     string url;
     int nbSecBetweenRecords = -1;
     int ID;
-    void updateTime();
+    void updateTime(); // Print the current date and time in a file, to make sure the process is still running
 };
 
 #endif /* MANAGER_H */

@@ -28,24 +28,23 @@ using namespace boost;
 static mutex mutex_camlist;
 
 Manager::Manager() {
-    if (isRunningManager()) {
+    if (isRunningManager()) { //If a manager is Running, don't start a new one
         exit(0);
     }
+    setLocation(""); //Reinit location
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    string runfileName = directoryOfFiles + "/.RunningVideoRecorder";
+    string runfileName = directoryOfFiles + "/.RunningVideoRecorder"; // Save the path to the file that show it's still running
     remove(runfileName.c_str());
     ofstream runfile(runfileName);
     runfile << currentDate() << endl;
     name = "", log = "", password = "", url = "", path = "", tempPath = "";
-    ID = -1;
-    nbdays = -1;
-    nbMinBetweenMoveBuffer = -1;
-    bool firstCamera = true; // Prevent a bug for the start of the first camera
+    ID = -1, nbdays = -1, nbMinBetweenMoveBuffer = -1;
     int enregistrable = -1;
+    bool firstCamera = true; // Prevent a bug for the start of the first camera
     int nbLinesRead = 0; // Keep the number of the current line to send it as detail if an error is encountered
     ifstream file(directoryOfFiles + "/ConfigFiles/cameras.ini");
-    if (!file.is_open()) {
+    if (!file.is_open()) { // Check if the config file is at the right place
         string error = "File " + directoryOfFiles + "/ConfigFiles/cameras.ini was not found on the server : ";
         char hostname[128] = "";
         gethostname(hostname, sizeof (hostname));
@@ -97,7 +96,7 @@ Manager::Manager() {
                     }
                 } else if (parameterName == "Enregistrable") {
                     enregistrable = atoi(parameterValue.c_str());
-                    if (enregistrable != 0 && enregistrable != 1) {// if field not equal to 0 or 1, throw error
+                    if (enregistrable != 0 && enregistrable != 1) { //if field not equal to 0 or 1, throw error
                         throw InvalidLine(to_string(nbLinesRead) + " - enregistrable must be 0 or 1");
                     }
                 } else if (parameterName == "DossierEnreg") {
@@ -117,33 +116,33 @@ Manager::Manager() {
                         throw InvalidNbDays(parameterValue.substr(0, parameterValue.size() - 1));
                     }
                 } else if (parameterName == "Site") {
-                    if (!setLocation(parameterValue)) {
+                    if (!setLocation(parameterValue)) { // Check if the location hasn't been changed yet
                         throw DuplicateField("Site");
                     }
                 } else if (parameterName == "nbSecondsRecord") {
-                    if (isOnlyNumeric(parameterValue)) {
+                    if (isOnlyNumeric(parameterValue)) { //check if the number of seconds to record is a positive integer
                         if (!Camera::setSecondsToRecord(atoi(parameterValue.c_str()))) {
                             throw DuplicateField("Number of seconds to record");
                         }
                     }
                 } else if (parameterName == "nbSecondsBetweenRecord") {
-                    if (isOnlyNumeric(parameterValue)) {
-                        if (this->nbSecBetweenRecords != -1) {
+                    if (isOnlyNumeric(parameterValue)) { //check if the number of seconds between each record is a positive integer
+                        if (this->nbSecBetweenRecords != -1) { //check if the number of seconds between each record hasn't been changed yet
                             throw DuplicateField("Number of seconds between record");
                         } else {
                             this->nbSecBetweenRecords = atoi(parameterValue.c_str());
                         }
                     } else {
-                        throw InvalidNbMin(parameterValue);
+                        throw InvalidNbMin(parameterValue); // Throw an error if the number is invalid
                     }
                 } else if (parameterName == "TempDirectory") {
-                    if (this->tempPath != "") {
+                    if (this->tempPath != "") { // Check if ther is not two buffer directory declared for one camera
                         throw DuplicateField("Buffer directory");
                     } else {
                         tempPath = parameterValue.substr(0, parameterValue.length() - 1);
                     }
                 } else if (parameterName == "NbMinBuffer") {
-                    if (isOnlyNumeric(parameterValue)) {
+                    if (isOnlyNumeric(parameterValue)) { //check if the number of minutes between each move from buffer to final directory  is a positive integer
                         if (this->nbMinBetweenMoveBuffer != -1) {
                             throw DuplicateField("Time between moves from buffer");
                         } else {
@@ -179,9 +178,8 @@ void Manager::CameraOver(int &enregistrable) {
         nbdays = DEFAULT_DAYS_TO_KEEP;
     }
     if (ID != -1 && name != "" && log != "" && password != "" && url != "" && enregistrable != -1) {
-        // Make sure there is not two cameras with the same ID
         for (Camera* camera : CameraList) {
-            if (camera->GetID() == ID) {
+            if (camera->GetID() == ID) { // Make sure there is not two cameras with the same ID
                 throw DuplicateID(to_string(ID));
             }
         }
@@ -189,9 +187,12 @@ void Manager::CameraOver(int &enregistrable) {
             mutex_camlist.lock();
             if (tempPath != "") {
                 CameraList.push_back(new Camera(tempPath, ID, name, log, password, url));
+                if (nbMinBetweenMoveBuffer == -1) {
+                    nbMinBetweenMoveBuffer = DEFAULT_TIME_BUFFER_MOVE; // If there is no number of minute between each move from buffer memory, default (60) is applied
+                }
                 addBufferDir(nbMinBetweenMoveBuffer, path, tempPath, ID);
             } else {
-                CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url));
+                CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url)); // Create a list of camera
             }
             mutex_camlist.unlock();
         } else if (enregistrable == 1 && path != "") {
@@ -230,7 +231,7 @@ Manager::~Manager() {
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string toRemove = directoryOfFiles + "/.RunningVideoRecorder";
-    remove(toRemove.c_str());
+    remove(toRemove.c_str()); // Remove the file telling that a Manager is running
     for (Camera* camera : CameraList) {
         delete camera;
     }
@@ -249,10 +250,9 @@ void Manager::startRecords() {
         thread(&Camera::record, camera);
         sleep(nbSecBetweenRecords);
     }
-    thread(startMoveFromBuffer, nbdays, nbMinBetweenMoveBuffer);
-    sleep(30);
+    thread(startMoveFromBuffer, nbdays);
     while (1) {
-        removeOldCrashedCameras();
+        removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
         for (Camera *camera : CameraList) {
             if (!IsInRunningList(to_string(camera->GetID()))) {
                 thread(&Camera::record, camera);
@@ -266,7 +266,7 @@ void Manager::startRecords() {
                 }
                 sleep(nbSecBetweenRecords);
             } else {
-                deleteNode(to_string(camera->GetID()));
+                deleteNode(to_string(camera->GetID())); // Remove the camera from the list
             }
         }
         sleep(60);
@@ -275,13 +275,13 @@ void Manager::startRecords() {
 
 void Manager::updateTime() {
     struct passwd *pw = getpwuid(getuid());
-
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     if (!fileExists(directoryOfFiles)) {
         mkdir(directoryOfFiles.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
     }
     string file = directoryOfFiles + "/.RunningVideoRecorder";
-    while (1) {
+    while (1) { // Write the current time in the file every 30 seconds
+        cout << "changed time : " << currentDate() << endl;
         remove(file.c_str());
         ofstream runfile(file);
         runfile << currentDate() << endl;

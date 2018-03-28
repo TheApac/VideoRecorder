@@ -19,7 +19,7 @@
 #include <fstream>
 
 Watchdog::Watchdog() {
-    deamonize();
+    //deamonize();
     sleep(60);
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
@@ -30,7 +30,8 @@ Watchdog::Watchdog() {
             ifstream file(fileName);
             if (file.is_open()) {
                 getline(file, line);
-                if (secondsSinceDate(line) > 60) {
+                cout << "Watchdog : " << currentDate() << endl;
+                if (secondsSinceDate(line) > 180) {
                     sendEmail("Le manager du serveur ne répondait plus");
                     Camera::reinitTimeRecord();
                     pid_t pid = fork();
@@ -44,13 +45,16 @@ Watchdog::Watchdog() {
             }
             file.close();
         } else {
-            pid_t pid = fork();
-            if (pid == 0) {
-                sendEmail("Le manager du serveur n'a pas démarré");
-                remove(fileName.c_str());
-                Manager *manager = new Manager();
-                manager->startRecords();
-                exit(EXIT_SUCCESS);
+            sleep(5);
+            if (!fileExists(fileName)) {
+                pid_t pid = fork();
+                if (pid == 0) {
+                    sendEmail("Le manager du serveur ne répondait plus");
+                    remove(fileName.c_str());
+                    Manager *manager = new Manager();
+                    manager->startRecords();
+                    exit(EXIT_SUCCESS);
+                }
             }
         }
         line = "";

@@ -32,7 +32,7 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
     } else {
         this->directory = path + "/";
     }
-    this->nbdays = nbdays;
+    this->nbdays = nbdays; // The camera has to delete the old files
     this->ID = ID;
     this->name = name;
     this->log = log;
@@ -49,7 +49,7 @@ Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& pas
     } else {
         this->directory = tempPath + "/";
     }
-    this->nbdays = -1;
+    this->nbdays = -1; // The camera doesn't have to delete the files, as the process that moves them will
     this->ID = ID;
     this->name = name;
     this->log = log;
@@ -58,19 +58,18 @@ Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& pas
 }
 
 void Camera::record() {
-    string destinationDirectory = createDirectoryVideos(this->directory);
+    string destinationDirectory = createDirectoryVideos(this->directory); // Create the directory where the camera will record if it doesn't exist
     if (nbdays != -1) {
-        thread(removeOldFile, nbdays, this->directory);
+        thread(removeOldFile, nbdays, this->directory); // Remove the old files if it has to
     }
     string link = "rtsp://" + this->log + ":" + this->password + "@" + this->url;
     int video_stream_index; // keep the index of the video stream
     AVFormatContext* context = avformat_alloc_context();
     AVPacket packet; // packet sent by the camera
-
     av_init_packet(&packet);
     av_register_all(); // Initialize libavformat and register all the muxers
     avcodec_register_all(); // Register all the codecs, parsers and bitstream filters
-    bool error = false;
+    bool error = false; // Don't start recording if an error was encountered
     if (avformat_open_input(&context, link.c_str(), NULL, NULL) != 0) { //open rtsp
         if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
             sendEmail("Couldn't connect to the camera " + to_string(this->ID) + " of url " + this->url); // mail if camera is unreachable
@@ -139,6 +138,9 @@ void Camera::record() {
             avformat_close_input(&context);
             // ----------------------------- //
         }
+    } else {
+        sendEmail("Couldn't start writing the file for the camera " + to_string(this->ID) + " of url " + this->url);
+        addCrashedCamera(this->ID);
     }
 }
 
@@ -228,11 +230,15 @@ bool Camera::setSecondsToRecord(int sec) {
     if (SecondsToRecord == -1) {
         SecondsToRecord = sec;
         return true;
-    } else {
+    } else { // If the number of seconds to record had already been changed, an error will be thrown
         return false;
     }
 }
 
 void Camera::reinitTimeRecord() {
     SecondsToRecord = -1;
+}
+
+volatile int Camera::GetSecondsToRecord() {
+    return SecondsToRecord;
 }
