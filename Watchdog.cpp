@@ -17,40 +17,55 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <fstream>
+#include <signal.h>
+#include <iostream>
 
 Watchdog::Watchdog() {
-    //deamonize();
+    deamonize();
     sleep(60);
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
     string fileName = directoryOfFiles + "/.RunningVideoRecorder";
     string line = "";
+    string lastMail = "2000:01:01:00:00:00";
     while (1) {
         if (fileExists(fileName)) {
             ifstream file(fileName);
             if (file.is_open()) {
                 getline(file, line);
-                cout << "Watchdog : " << currentDate() << endl;
                 if (secondsSinceDate(line) > 180) {
-                    sendEmail("Le manager du serveur ne répondait plus");
+                    if (secondsSinceDate(lastMail) > 10 * 60) {
+                        sendEmail("Le manager du serveur ne répondait plus");
+                        lastMail = currentDate();
+                    }
                     Camera::reinitTimeRecord();
+                    signal(SIGCHLD, SIG_IGN);
                     pid_t pid = fork();
                     if (pid == 0) {
+                        file.close();
                         remove(fileName.c_str());
+                        setLocation("");
                         Manager *manager = new Manager();
                         manager->startRecords();
                         exit(EXIT_SUCCESS);
                     }
                 }
+                file.close();
             }
-            file.close();
         } else {
             sleep(5);
             if (!fileExists(fileName)) {
+                signal(SIGCHLD, SIG_IGN);
+                Camera::reinitTimeRecord();
                 pid_t pid = fork();
                 if (pid == 0) {
-                    sendEmail("Le manager du serveur ne répondait plus");
+                    if (secondsSinceDate(lastMail) > 10 * 60) {
+                        sendEmail("Le manager du serveur ne répondait plus");
+                        lastMail = currentDate();
+                    }
+                    lastMail = currentDate();
                     remove(fileName.c_str());
+                    setLocation("");
                     Manager *manager = new Manager();
                     manager->startRecords();
                     exit(EXIT_SUCCESS);
@@ -60,9 +75,6 @@ Watchdog::Watchdog() {
         line = "";
         sleep(60);
     }
-}
-
-Watchdog::Watchdog(const Watchdog & orig) {
 }
 
 Watchdog::~Watchdog() {

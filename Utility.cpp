@@ -18,6 +18,10 @@
 #include <pwd.h>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+}
 
 boost::mutex v_mutex;
 boost::mutex mutex_crashed;
@@ -138,13 +142,12 @@ static string defineDate() {
 }
 
 int sendEmail(string messageContent) {
+    addLog(messageContent);
     CURL *curl;
     CURLcode res = CURLE_OK;
     struct curl_slist *recipients = NULL;
     struct upload_status upload_ctx;
-
     upload_ctx.lines_read = 0;
-
     curl = curl_easy_init();
     if (curl) {
         mailContent = messageContent + "\nTime of error : " + defineDate().substr(6);
@@ -223,10 +226,11 @@ string createDirectoryVideos(string rootDirectory) {
     if (strlen(day.c_str()) < 2) {
         day = "0" + day; // if day < 10 we add a 0 in front of the number
     }
-    string date = rootDirectory + "/" + std::to_string(now->tm_year + 1900) + "." + month + "." + day; //get current date
+    string date = rootDirectory + std::to_string(now->tm_year + 1900) + "." + month + "." + day; //get current date
     string hour = date + "/H" + to_string(now->tm_hour) + "/"; //get current hour
-    if (stat(date.c_str(), &info) != 0) {
+    while (stat(date.c_str(), &info) != 0) {
         mkdir(date.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory YYYY.MM.DD
+        sleep(1);
     }
     mkdir(hour.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory "H"+HH in previously created directory
     return hour;
@@ -424,7 +428,7 @@ string currentDate() {
 
 /* Saves the geo location of the manager for the emails */
 bool setLocation(string location) {
-    if (SiteLocation == "") {
+    if (SiteLocation == "" || location == "") {
         SiteLocation = location;
         return true;
     }
@@ -569,8 +573,16 @@ void addCrashedCamera(int ID) {
 }
 
 void startMoveFromBuffer(int nbdays) {
+    int nbMin = bufferDirList.at(1)->nbMin;
     for (bufferDir* buffer : bufferDirList) {
         thread(MoveForEachDir, buffer->defDir, nbdays); // Start a thread for each final directory
+    }
+    sleep(300);
+    while (1) {
+        for (bufferDir* buff : bufferDirList) {
+            thread(MoveForEachDir, buff->defDir, nbdays); // Start a thread for each final directory
+        }
+        sleep(nbMin * 60 * 3);
     }
 }
 
@@ -584,6 +596,7 @@ void MoveForEachDir(string defDir, int nbdays) {
         }
     }
     while (1) { // every nbMin, move the files recorded from the right cam from each tempDir in the bufferMap to defDir
+        runningBufferMove = currentDate();
         thread(removeOldFile, nbdays, defDir);
         for (auto const &buff : bufferMap) {
             moveFromBufferMemory(defDir, buff.second, buff.first); // buff.first : IDCam, buff.second : tempDir
@@ -677,5 +690,50 @@ void addBufferDir(int nbmin, string defDir, string tempDir, int IDCam) {
         temp->nbMin = nbmin;
         temp->listBuffer[IDCam] = tempDir;
         bufferDirList.push_back(temp); // Add a new item for defDir
+    }
+}
+
+int getSizeListBuffDir() {
+    return bufferDirList.size();
+}
+
+string getPathForCameraID(int ID) {
+    int indexVec = 0;
+    string pathToFile = "";
+    while (indexVec < getSizeListBuffDir() && pathToFile == "") {
+        try {
+            if (bufferDirList.at(indexVec)->listBuffer[ID] != "") {
+                pathToFile = bufferDirList.at(indexVec)->defDir;
+            }
+            indexVec++;
+        } catch (std::exception const& e) {
+            indexVec++;
+        }
+    }
+    return pathToFile;
+}
+
+void addLog(string log) {
+    std::ofstream out;
+    struct passwd *pw = getpwuid(getuid());
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    string logFileName = directoryOfFiles + "/.logs"; // Save the path to the file that show it's still running
+    out.open(logFileName.c_str(), std::ios::app);
+    if (log != "Success") {
+        out << currentDate() << " : " << log << "\r\n";
+    }
+    out.close();
+}
+
+string getAvError(int errorCode) {
+    if (errorCode < 0) {
+        errorCode = -errorCode;
+    }
+    char errorMessage[512];
+    int found = av_strerror(errorCode, errorMessage, 512);
+    if (found == 0) {
+        return (string(errorMessage));
+    } else {
+        return "Unknown error";
     }
 }

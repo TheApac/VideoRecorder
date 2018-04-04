@@ -37,9 +37,15 @@ private:
     string log;
     string password;
     string url;
+    int listenPort;
     int nbSecBetweenRecords = -1;
     int ID;
     void updateTime(); // Print the current date and time in a file, to make sure the process is still running
+    void startMvmtDetect();
+    void detectMvmt();
+    void getListenPort();
+    Camera* getCamByIp(string ip);
+    void runBufferDir();
 };
 
 #endif /* MANAGER_H */

@@ -44,6 +44,7 @@ struct bufferDir {
     map<int, string> listBuffer;
 };
 
+static string runningBufferMove = "2000:01:01:00:00:00"; // Make sure thread to move files is still running
 static vector<bufferDir*> bufferDirList; // Keep info for each final directories
 void startMoveFromBuffer(int nbdays);
 void MoveForEachDir(string defDir, int nbdays);
@@ -76,6 +77,9 @@ int timeSinceCrashCamera(int IDCam); // Return the number of seconds since the c
 void addCrashedCamera(int ID); // Add a camera to the list, with the time it crashed
 void moveFromBufferMemory(string &defDir, string tempDir, int IDCam); // Move every file saved by camera IDCam from tempDir to defDir
 int secondsSinceRecord(string fileName); // Return the number of seconds since the file was recorded
+int getSizeListBuffDir();
+string getPathForCameraID(int ID);
+void addLog(string log);
+string getAvError(int errorCode);
 
 #endif /* UTILITY_H */
-

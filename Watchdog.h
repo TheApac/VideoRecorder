@@ -19,7 +19,6 @@
 class Watchdog {
 public:
     Watchdog();
-    Watchdog(const Watchdog& orig);
     virtual ~Watchdog();
 };
 

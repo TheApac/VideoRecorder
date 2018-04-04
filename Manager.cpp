@@ -22,10 +22,13 @@
 #include <pwd.h>
 #include <boost/thread.hpp>
 #include <sys/stat.h>
+#include<sys/socket.h>
+#include <stdlib.h>
+#include<arpa/inet.h> //inet_addr
+#include <boost/date_time/posix_time/posix_time.hpp>
 
-using namespace boost;
-
-static mutex mutex_camlist;
+static boost::mutex mutex_camlist;
+static boost::mutex m_ip;
 
 Manager::Manager() {
     if (isRunningManager()) { //If a manager is Running, don't start a new one
@@ -245,17 +248,20 @@ void Manager::startRecords() {
     if (nbSecBetweenRecords == -1) {
         nbSecBetweenRecords = DEFAULT_TIME_BETWEEN_RECORDS;
     }
-    thread(&Manager::updateTime, this);
+    boost::thread(&Manager::updateTime, this);
+    boost::thread(startMoveFromBuffer, nbdays);
+    boost::thread(runBufferDir);
+    boost::thread(&Manager::startMvmtDetect, this);
+
     for (Camera *camera : CameraList) {
-        thread(&Camera::record, camera);
+        boost::thread(&Camera::record, camera);
         sleep(nbSecBetweenRecords);
     }
-    thread(startMoveFromBuffer, nbdays);
     while (1) {
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
         for (Camera *camera : CameraList) {
             if (!IsInRunningList(to_string(camera->GetID()))) {
-                thread(&Camera::record, camera);
+                boost::thread(&Camera::record, camera);
                 if (!didCameraCrash(camera->GetID())) {
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
                     addCrashedCamera(camera->GetID());
@@ -281,11 +287,138 @@ void Manager::updateTime() {
     }
     string file = directoryOfFiles + "/.RunningVideoRecorder";
     while (1) { // Write the current time in the file every 30 seconds
-        cout << "changed time : " << currentDate() << endl;
         remove(file.c_str());
         ofstream runfile(file);
         runfile << currentDate() << endl;
         runfile.close();
         sleep(30);
+    }
+}
+
+void Manager::startMvmtDetect() {
+    while (1) {
+        m_ip.lock();
+        detectMvmt();
+    }
+}
+
+void Manager::detectMvmt() {
+    getListenPort();
+    int socket_desc, client_sock, c, read_size;
+    struct sockaddr_in server, client;
+    char client_message[2000];
+    int trueflag = 1;
+    //Create socket
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &trueflag, sizeof (int));
+    //Prepare the sockaddr_in structure
+    server.sin_family = AF_INET; // IPV4
+    server.sin_addr.s_addr = INADDR_ANY; //Any incoming IP
+    server.sin_port = htons(listenPort); //listening port
+
+    bind(socket_desc, (struct sockaddr *) &server, sizeof (server));
+
+    listen(socket_desc, 300); // start listening
+    c = sizeof (struct sockaddr_in);
+    client_sock = accept(socket_desc, (struct sockaddr *) &client, (socklen_t*) & c); //accept connection from an incoming client
+
+    while ((read_size = recv(client_sock, client_message, 2000, 0)) > 0) { //Receive a message from client
+        string message = string(client_message).substr(0, 3);
+        char ipClient[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &client.sin_addr, ipClient, INET_ADDRSTRLEN);
+        Camera* cam = getCamByIp(ipClient);
+        if (cam != NULL && message == "mvt") { // Make sure the good message comes from a camera
+            std::ofstream out;
+            string pathToFile = "";
+            if (cam->GetNbdays() > 0) { //record in the final directory
+                pathToFile = cam->GetDirectory();
+            } else { //record in the buffer directory
+                pathToFile = getPathForCameraID(cam->GetID());
+            }
+            time_t t = time(0); // get time now
+            struct tm * nowTime = localtime(&t); //get local time
+            string month = to_string(nowTime->tm_mon + 1);
+            if (strlen(month.c_str()) < 2) {
+                month = "0" + month; // if month < 10 we add a 0 in front of the number
+            }
+            string day = to_string(nowTime->tm_mday);
+            if (strlen(day.c_str()) < 2) {
+                day = "0" + day; // if day < 10 we add a 0 in front of the number
+            }
+            string date = pathToFile + to_string(nowTime->tm_year + 1900) + "." + month + "." + day; //get current date
+            mkdir(date.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+            pathToFile = date + "/C" + to_string(cam->GetID()) + "-" + to_string(nowTime->tm_year + 1900) + month + day + ".mvt";
+            out.open(pathToFile.c_str(), std::ios::app);
+            const boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time();
+            // Get the time offset in current day
+            const boost::posix_time::time_duration td = now.time_of_day();
+            const long hours = td.hours(); // Current hour
+            const long minutes = td.minutes(); // Current minute
+            const long seconds = td.seconds(); // Current seconds
+            const long milliseconds = td.total_milliseconds() -((hours * 3600 + minutes * 60 + seconds) * 1000); // Convert number of seconds since midnight to current milliseconds
+            string toPrint = "";
+            if (hours < 10) { // if hour between 1 and 9, add a 0 in front of it
+                toPrint += "0" + to_string(hours);
+            } else {
+                toPrint += to_string(hours);
+            }
+            if (minutes < 10) { // if minute between 1 and 9, add a 0 in front of it
+                toPrint += "0" + to_string(minutes);
+            } else {
+                toPrint += to_string(minutes);
+            }
+            if (seconds < 10) { // if seconds between 1 and 9, add a 0 in front of it
+                toPrint += "0" + to_string(seconds);
+            } else {
+                toPrint += to_string(seconds);
+            }
+            if (milliseconds < 10) { // if milliseconds between 1 and 9, add two 0 in front of it
+                toPrint += "00" + to_string(milliseconds);
+            } else if (milliseconds < 100) { // if milliseconds between 10 and 99, add a 0 in front of it
+                toPrint += "0" + to_string(milliseconds);
+            } else {
+                toPrint += to_string(milliseconds);
+            }
+            out << toPrint << "\r\n";
+            out.close();
+        }
+    }
+    m_ip.unlock();
+    close(socket_desc);
+}
+
+void Manager::getListenPort() {
+    listenPort = -1;
+    struct passwd *pw = getpwuid(getuid());
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    ifstream file(directoryOfFiles + "/ConfigFiles/2NWatchDog.ini");
+    string line;
+    while (getline(file, line) && listenPort == -1) { //iterate through the file while the configuration isn't over
+        if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
+            string parameterName = line.substr(0, line.find_first_of("="));
+            if (parameterName == "port_mvt") {
+                this->listenPort = atoi(line.substr(line.find_first_of("=") + 1).c_str());
+            }
+        }
+    }
+}
+
+Camera * Manager::getCamByIp(string ip) {
+    for (Camera* cam : CameraList) {
+        if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) {
+            return cam;
+        }
+    }
+    return NULL;
+}
+
+void Manager::runBufferDir() {
+    if (bufferDirList.size() > 0) {
+        int nbMin = bufferDirList.at(0)->nbMin;
+        sleep(10);
+        if (secondsSinceDate(runningBufferMove) > nbMin * 60 * 3) {
+            boost::thread(startMoveFromBuffer, nbdays);
+        }
+        sleep(nbMin * 60 * 3);
     }
 }
