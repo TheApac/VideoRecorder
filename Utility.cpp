@@ -18,6 +18,7 @@
 #include <pwd.h>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
+#include <boost/filesystem.hpp>
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -34,6 +35,11 @@ string loginSMTP = "";
 string passwordSMTP = "";
 string urlSMTP = "";
 string SiteLocation = "";
+
+class Camera {
+public:
+    static volatile int GetSecondsToRecord();
+};
 
 /* Verify if every char of a string is a number */
 bool isOnlyNumeric(string &str) {
@@ -551,6 +557,7 @@ bool didCameraCrash(int ID) {
 
 int timeSinceCrashCamera(int IDCam) {
     if (!didCameraCrash(IDCam)) { // If it never crashed, return a large number
+        addCrashedCamera(IDCam);
         return 9999999;
     }
     mutex_crashed.lock();
@@ -574,16 +581,10 @@ void addCrashedCamera(int ID) {
 
 void startMoveFromBuffer(int nbdays) {
     int nbMin = bufferDirList.at(1)->nbMin;
-    for (bufferDir* buffer : bufferDirList) {
-        thread(MoveForEachDir, buffer->defDir, nbdays); // Start a thread for each final directory
+    for (bufferDir* buff : bufferDirList) {
+        thread(MoveForEachDir, buff->defDir, nbdays); // Start a thread for each final directory
     }
-    sleep(300);
-    while (1) {
-        for (bufferDir* buff : bufferDirList) {
-            thread(MoveForEachDir, buff->defDir, nbdays); // Start a thread for each final directory
-        }
-        sleep(nbMin * 60 * 3);
-    }
+    sleep(nbMin);
 }
 
 void MoveForEachDir(string defDir, int nbdays) {
@@ -597,18 +598,19 @@ void MoveForEachDir(string defDir, int nbdays) {
     }
     while (1) { // every nbMin, move the files recorded from the right cam from each tempDir in the bufferMap to defDir
         runningBufferMove = currentDate();
-        thread(removeOldFile, nbdays, defDir);
+        removeOldFile(nbdays, defDir);
+        int nbdaysTemp = nbdays - 1;
+        while (remainingFreeSpace(defDir) < AVERAGE_FILE_SIZE * Camera::GetSecondsToRecord() / 60) {
+            sendEmail("Not enough space left to record in : " + defDir);
+            removeOldFile(nbdaysTemp, defDir);
+            nbdaysTemp = nbdaysTemp - 1;
+        }
         for (auto const &buff : bufferMap) {
             moveFromBufferMemory(defDir, buff.second, buff.first); // buff.first : IDCam, buff.second : tempDir
         }
-        sleep(nbMin * 60);
+        sleep(nbMin);
     }
 }
-
-class Camera {
-public:
-    static volatile int GetSecondsToRecord();
-};
 
 void moveFromBufferMemory(string& defDir, string tempDir, int IDCam) {
     DIR * dir;
@@ -717,10 +719,11 @@ void addLog(string log) {
     std::ofstream out;
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    string logFileName = directoryOfFiles + "/.logs"; // Save the path to the file that show it's still running
+    string logFileName = directoryOfFiles + "/.logs"; // Path to log file
     out.open(logFileName.c_str(), std::ios::app);
-    if (log != "Success") {
+    if (log != "Success") { // Don't print code Success in log
         out << currentDate() << " : " << log << "\r\n";
+        cout << currentDate() << " : " << log << "\r\n";
     }
     out.close();
 }
@@ -736,4 +739,9 @@ string getAvError(int errorCode) {
     } else {
         return "Unknown error";
     }
+}
+
+long int remainingFreeSpace(string path) {
+    boost::filesystem::space_info si = boost::filesystem::space(path);
+    return si.available / 1024 / 1024;
 }

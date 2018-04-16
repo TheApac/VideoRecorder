@@ -59,7 +59,15 @@ Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& pas
 
 void Camera::record() {
     if (nbdays != -1) {
+        int nbdaysTemp = nbdays - 1;
         removeOldFile(nbdays, this->directory); // Remove the old files if it has to
+        if (remainingFreeSpace(this->directory) < AVERAGE_FILE_SIZE * SecondsToRecord / 60) { //make sure the camera has enough space to record
+            sendEmail("Not enough space left to record in : " + this->directory);
+            while (remainingFreeSpace(this->directory) < AVERAGE_FILE_SIZE * SecondsToRecord / 60) { //remove files until it has enough space
+                removeOldFile(nbdaysTemp, this->directory);
+                nbdaysTemp = nbdaysTemp - 1;
+            }
+        }
     }
     string destinationDirectory = createDirectoryVideos(this->directory); // Create the directory where the camera will record if it doesn't exist
     string link = "rtsp://" + this->log + ":" + this->password + "@" + this->url;
@@ -74,6 +82,7 @@ void Camera::record() {
     if (averr != 0) { //open rtsp
         if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
             sendEmail("Couldn't connect to the camera " + to_string(this->ID) + " of url " + this->url); // mail if camera is unreachable
+            cout << "avformat open input" << endl;
             addCrashedCamera(this->ID);
         }
         error = true;
@@ -85,11 +94,10 @@ void Camera::record() {
         if (averr < 0) { // retrieve informations of the stream
             if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
                 sendEmail("Couldn't retrieve informations for the camera " + to_string(this->ID) + " of url " + this->url);
+                cout << "avformat_find_stream_info" << endl;
                 addCrashedCamera(this->ID);
             }
             error = true;
-        } else {
-            addLog(getAvError(averr));
         }
     }
     if (!error) {
@@ -107,6 +115,7 @@ void Camera::record() {
         }
         if (!oc) {
             error = true;
+            cout << "avformat_alloc_output_context2" << endl;
             addLog(getAvError(averr));
         }
         if (!error) {
@@ -115,7 +124,12 @@ void Camera::record() {
                 averr = avio_open(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE); //open output file
                 if (averr < 0) {
                     error = true;
-                    addLog(getAvError(averr));
+                    createDirectoryVideos(this->directory);
+                    averr = avio_open(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE); //open output file
+                    if (averr < 0) {
+                        cout << "avio_open : " << fullName.c_str() << endl;
+                        addLog(getAvError(averr));
+                    }
                 }
             }
             if (!error) {
@@ -126,6 +140,7 @@ void Camera::record() {
                 int averr = avformat_write_header(oc, NULL); // write the header in the out file
                 if (averr < 0) {
                     error = true;
+                    cout << "avformat_write_header" << endl;
                     addLog(getAvError(averr));
                 }
             }
@@ -134,6 +149,9 @@ void Camera::record() {
                 time_t t = time(0);
                 long int secondsToStop = time(&t) + SecondsToRecord; // save when to stop recording this video
                 while (time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
+                    if (!IsInRunningList(to_string(this->ID))) {
+                        addRunningCamera(to_string(this->ID));
+                    }
                     if (av_read_frame(context, &packet) < 0) {
                         if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
                             sendEmail("The camera " + to_string(this->ID) + " of url " + this->url + " stopped sending informations");
@@ -147,9 +165,6 @@ void Camera::record() {
                     if (!recordNext && time(&t) + 6 == secondsToStop) {
                         thread(&Camera::record, this);
                         recordNext = true;
-                    }
-                    if (!IsInRunningList(to_string(this->ID))) {
-                        addRunningCamera(to_string(this->ID));
                     }
                     av_free_packet(&packet); // clear the packet
                 }

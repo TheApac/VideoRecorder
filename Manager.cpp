@@ -252,30 +252,24 @@ void Manager::startRecords() {
     boost::thread(startMoveFromBuffer, nbdays);
     boost::thread(runBufferDir);
     boost::thread(&Manager::startMvmtDetect, this);
-
     for (Camera *camera : CameraList) {
         boost::thread(&Camera::record, camera);
         sleep(nbSecBetweenRecords);
     }
-    while (1) {
+    while (1) { // make sure every camera is still recording
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
         for (Camera *camera : CameraList) {
             if (!IsInRunningList(to_string(camera->GetID()))) {
-                boost::thread(&Camera::record, camera);
-                if (!didCameraCrash(camera->GetID())) {
+                if (timeSinceCrashCamera(camera->GetID()) > 10 * 60) { // Don't send 2 mails in less than 10 min
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
-                    addCrashedCamera(camera->GetID());
-                } else {
-                    if (timeSinceCrashCamera(camera->GetID()) > 10 * 60) { // Don't send 2 mails in less than 10 min
-                        sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
-                    }
                 }
+                boost::thread(&Camera::record, camera);
                 sleep(nbSecBetweenRecords);
             } else {
                 deleteNode(to_string(camera->GetID())); // Remove the camera from the list
             }
         }
-        sleep(60);
+        sleep(60); // Run every 1 min
     }
 }
 
@@ -308,20 +302,16 @@ void Manager::detectMvmt() {
     struct sockaddr_in server, client;
     char client_message[2000];
     int trueflag = 1;
-    //Create socket
-    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0); //Create socket
     setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &trueflag, sizeof (int));
     //Prepare the sockaddr_in structure
     server.sin_family = AF_INET; // IPV4
     server.sin_addr.s_addr = INADDR_ANY; //Any incoming IP
     server.sin_port = htons(listenPort); //listening port
-
     bind(socket_desc, (struct sockaddr *) &server, sizeof (server));
-
     listen(socket_desc, 300); // start listening
     c = sizeof (struct sockaddr_in);
     client_sock = accept(socket_desc, (struct sockaddr *) &client, (socklen_t*) & c); //accept connection from an incoming client
-
     while ((read_size = recv(client_sock, client_message, 2000, 0)) > 0) { //Receive a message from client
         string message = string(client_message).substr(0, 3);
         char ipClient[INET_ADDRSTRLEN];
@@ -379,12 +369,12 @@ void Manager::detectMvmt() {
             } else {
                 toPrint += to_string(milliseconds);
             }
-            out << toPrint << "\r\n";
-            out.close();
+            out << toPrint << "\r\n"; // Add the date at the end of the file
+            out.close(); // close the file
         }
     }
-    m_ip.unlock();
     close(socket_desc);
+    m_ip.unlock();
 }
 
 void Manager::getListenPort() {
@@ -397,28 +387,32 @@ void Manager::getListenPort() {
         if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
             string parameterName = line.substr(0, line.find_first_of("="));
             if (parameterName == "port_mvt") {
-                this->listenPort = atoi(line.substr(line.find_first_of("=") + 1).c_str());
+                this->listenPort = atoi(line.substr(line.find_first_of("=") + 1).c_str()); // Sets the port to the parameter in file
             }
         }
     }
 }
 
+/* Return the camera from its IP */
 Camera * Manager::getCamByIp(string ip) {
     for (Camera* cam : CameraList) {
-        if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) {
+        if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) { //get IP by cuttin the port and following
             return cam;
         }
     }
-    return NULL;
+    return NULL; // Return NULL if no camera has that IP
 }
 
+/* Reboot thread that will move files from buffer to definitive directory if crashed */
 void Manager::runBufferDir() {
     if (bufferDirList.size() > 0) {
-        int nbMin = bufferDirList.at(0)->nbMin;
+        int nbMin = bufferDirList.at(0)->nbMin; // gets the number of minutes between move
         sleep(10);
-        if (secondsSinceDate(runningBufferMove) > nbMin * 60 * 3) {
-            boost::thread(startMoveFromBuffer, nbdays);
+        while (1) {
+            if (secondsSinceDate(runningBufferMove) > nbMin * 3) { // wait for 3 loop before checking
+                boost::thread(startMoveFromBuffer, nbdays);
+            }
+            sleep(nbMin * 3);
         }
-        sleep(nbMin * 60 * 3);
     }
 }
