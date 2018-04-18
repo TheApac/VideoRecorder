@@ -27,6 +27,7 @@
 #define DEFAULT_DAYS_TO_KEEP 30 // numbers of day before a file must be deleted : 30
 #define DEFAULT_TIME_BUFFER_MOVE 60 // number of minutes before the process move the recorded files : 60
 #define AVERAGE_FILE_SIZE 10 // average size of a minute of video record in Mo : 10
+#define TIME_BEFORE_NEW_RECORD 6 // number of seconds left in a record before a new one is started : 6
 
 using namespace std;
 
@@ -46,13 +47,12 @@ struct bufferDir {
 };
 
 static string runningBufferMove = "2000:01:01:00:00:00"; // Make sure thread to move files is still running
-static vector<bufferDir*> bufferDirList; // Keep info for each final directories
+static vector<bufferDir> bufferDirList; // Keep info for each final directories
 void startMoveFromBuffer(int nbdays);
 void MoveForEachDir(string defDir, int nbdays);
 void addBufferDir(int nbmin, string defDir, string tempDir, int ID);
 static vector<string> CrashedCameraList; // Vector that store which camera crashed when
 static struct node_t* RunningCameraList; // keep the cameras running
-int getRunningCameraSize();
 bool IsInRunningList(string ID);
 void deleteNode(string valueToDelete);
 void addRunningCamera(string ID);
@@ -70,8 +70,6 @@ string currentDate(); // return the current date at the format "YYYY:MM:DD:HH::m
 int secondsSinceDate(string dateToCompare); /* Calculate the number of seconds ellapsed since a date formated as "YYYY:MM:DD:HH:MM:SS" */
 bool setLocation(string location); /* Saves the geo location of the manager for the emails */
 bool isRunningManager(); /* Check if there is not already a manager running */
-void CleanUpNodes(); // Delete each node of a singly linked list
-static void CleanUpNodesRec(node_t * head); /* Recursive delete of the nodes */
 bool didCameraCrash(int ID); // Check if the camera of ID given in parameter crashed less than 10minutes ago
 void removeOldCrashedCameras(); // Remove from the crashed camera list, the ones that crashed more than 10min ago
 int timeSinceCrashCamera(int IDCam); // Return the number of seconds since the camera of ID IDCam crashed
@@ -81,7 +79,7 @@ int secondsSinceRecord(string fileName); // Return the number of seconds since t
 int getSizeListBuffDir(); // Return the size of the list that keeps the bufferDir structs
 string getPathForCameraID(int ID); // Return the path where the record of camera of ID given as parameter is saved
 void addLog(string log); // Add a line in the log file
-string getAvError(int errorCode); // Return a string with explanation of AVERROR from its code
+string getAvError(int& errorCode); // Return a string with explanation of AVERROR from its code
 long int remainingFreeSpace(string path); // Return the number of free Mo at the path given in parameter
 
 #endif /* UTILITY_H */

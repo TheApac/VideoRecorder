@@ -14,8 +14,6 @@
 #ifndef WATCHDOG_H
 #define WATCHDOG_H
 
-#include "Manager.h"
-
 class Watchdog {
 public:
     Watchdog();

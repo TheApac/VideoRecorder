@@ -28,24 +28,25 @@ public:
 private:
     void CameraOver(int &enregistrable);
     vector<Camera*> CameraList; /* Save each camera in a vector to run their record function after they all have been initialized */
-    // Keep the value of the camera fields while creating them
+    /* Keep the value of the camera fields while creating them */
     int nbdays;
+    int ID;
     string path;
     string tempPath;
-    int nbMinBetweenMoveBuffer;
     string name;
     string log;
     string password;
     string url;
-    int listenPort;
+    /* ------------------------------------------------------- */
+    int listenPort; // Port where movement notification are sent
+    int nbMinBetweenMoveBuffer;
     int nbSecBetweenRecords = -1;
-    int ID;
     void updateTime(); // Print the current date and time in a file, to make sure the process is still running
-    void startMvmtDetect();
-    void detectMvmt();
-    void getListenPort();
-    Camera* getCamByIp(string ip);
-    void runBufferDir();
+    void startMvmtDetect(); // Start a new thread waiting for a tcp message
+    void detectMvmt(); // Wait for a TCP notification and check if the message is good and coming from a camera
+    void getListenPort(); // Retrieve the port where notification are sent
+    Camera* getCamByIp(string ip); // Return a camera from an IP, NULL if no camera is found
+    void runBufferDir(); // Reboot thread that will move files from buffer to definitive directory if crashed
 };
 
 #endif /* MANAGER_H */

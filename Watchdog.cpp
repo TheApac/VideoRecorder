@@ -18,7 +18,6 @@
 #include <pwd.h>
 #include <fstream>
 #include <signal.h>
-#include <iostream>
 
 Watchdog::Watchdog() {
     deamonize();

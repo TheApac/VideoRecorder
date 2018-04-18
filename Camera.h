@@ -16,10 +16,6 @@
 
 #include <string>
 
-#include "Manager.h"
-
-class Manager;
-
 using namespace std;
 
 class Camera {
@@ -30,8 +26,6 @@ public:
 
     int GetID() const;
     string GetDirectory() const;
-    string GetLog() const;
-    string GetName() const;
     int GetNbdays() const;
     string GetPassword() const;
     string GetUrl() const;
@@ -53,7 +47,6 @@ private:
     string url; /* URL of the rtsp */
     string log; /* Log for the rtsp */
     string password; /* Password for the rtsp */
-    Manager* manager; /* Application manager */
     string timeOfLastCrash; /* Keep the date of the last email sent */
 };
 

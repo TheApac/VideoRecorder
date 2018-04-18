@@ -11,21 +11,21 @@
  * Created on 24 janvier 2018, 14:27
  */
 
-#include "Utility.h"
 #include "Manager.h"
+#include "Utility.h"
 #include "CustomException.h"
 #include <iostream>
 #include <fstream>
 #include <regex>
-#include <unistd.h>
 #include <signal.h>
 #include <pwd.h>
 #include <boost/thread.hpp>
 #include <sys/stat.h>
-#include<sys/socket.h>
-#include <stdlib.h>
-#include<arpa/inet.h> //inet_addr
+#include <sys/socket.h>
+#include <arpa/inet.h> //inet_addr
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <iostream>
+#include <unistd.h>
 
 static boost::mutex mutex_camlist;
 static boost::mutex m_ip;
@@ -48,11 +48,7 @@ Manager::Manager() {
     int nbLinesRead = 0; // Keep the number of the current line to send it as detail if an error is encountered
     ifstream file(directoryOfFiles + "/ConfigFiles/cameras.ini");
     if (!file.is_open()) { // Check if the config file is at the right place
-        string error = "File " + directoryOfFiles + "/ConfigFiles/cameras.ini was not found on the server : ";
-        char hostname[128] = "";
-        gethostname(hostname, sizeof (hostname));
-        error += string(hostname) + "\n";
-        sendEmail(error);
+        sendEmail("File " + directoryOfFiles + "/ConfigFiles/cameras.ini was not found");
         exit(EXIT_FAILURE);
     }
     string line;
@@ -231,20 +227,15 @@ void Manager::CameraOver(int &enregistrable) {
 }
 
 Manager::~Manager() {
-    struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    string toRemove = directoryOfFiles + "/.RunningVideoRecorder";
-    remove(toRemove.c_str()); // Remove the file telling that a Manager is running
-    for (Camera* camera : CameraList) {
-        delete camera;
+    for (bufferDir buff : bufferDirList) {
+        buff.listBuffer.clear();
     }
-    CleanUpNodes();
 }
 
 /* Start to record each cameras
  Check if they are still running, reboot them if not */
 void Manager::startRecords() {
-    //deamonize();
+    deamonize();
     if (nbSecBetweenRecords == -1) {
         nbSecBetweenRecords = DEFAULT_TIME_BETWEEN_RECORDS;
     }
@@ -253,45 +244,41 @@ void Manager::startRecords() {
     boost::thread(runBufferDir);
     boost::thread(&Manager::startMvmtDetect, this);
     for (Camera *camera : CameraList) {
-        boost::thread(&Camera::record, camera);
-        sleep(nbSecBetweenRecords);
+        boost::thread(&Camera::record, camera); // Start the record in a new thread
+        sleep(nbSecBetweenRecords); // wait between the start of each record
     }
     while (1) { // make sure every camera is still recording
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
         for (Camera *camera : CameraList) {
-            if (!IsInRunningList(to_string(camera->GetID()))) {
+            if (!IsInRunningList(to_string(camera->GetID()))) { // If the camera isn't running
                 if (timeSinceCrashCamera(camera->GetID()) > 10 * 60) { // Don't send 2 mails in less than 10 min
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
                 }
-                boost::thread(&Camera::record, camera);
-                sleep(nbSecBetweenRecords);
+                boost::thread(&Camera::record, camera); // Restart the record
+                sleep(nbSecBetweenRecords); // wait so there isn't two records starting a the same time
             } else {
                 deleteNode(to_string(camera->GetID())); // Remove the camera from the list
             }
         }
-        sleep(60); // Run every 1 min
+        sleep(60); // Run every minute
     }
 }
 
 void Manager::updateTime() {
     struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    if (!fileExists(directoryOfFiles)) {
-        mkdir(directoryOfFiles.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-    }
-    string file = directoryOfFiles + "/.RunningVideoRecorder";
+    string file = string(pw->pw_dir) + "/.VideoRecorderFiles/.RunningVideoRecorder";
     while (1) { // Write the current time in the file every 30 seconds
         remove(file.c_str());
         ofstream runfile(file);
         runfile << currentDate() << endl;
         runfile.close();
-        sleep(30);
+        sleep(30); // Update date saved in file every 30 seconds
     }
 }
 
 void Manager::startMvmtDetect() {
     while (1) {
-        m_ip.lock();
+        m_ip.lock(); // Only one detection at the same time
         detectMvmt();
     }
 }
@@ -300,9 +287,9 @@ void Manager::detectMvmt() {
     getListenPort();
     int socket_desc, client_sock, c, read_size;
     struct sockaddr_in server, client;
-    char client_message[2000];
-    int trueflag = 1;
-    socket_desc = socket(AF_INET, SOCK_STREAM, 0); //Create socket
+    char client_message[2000]; // Char[] that saves the message received
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0); // Create socket
+    int trueflag = 1; // Has to be a reference in setsockopt
     setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &trueflag, sizeof (int));
     //Prepare the sockaddr_in structure
     server.sin_family = AF_INET; // IPV4
@@ -313,10 +300,10 @@ void Manager::detectMvmt() {
     c = sizeof (struct sockaddr_in);
     client_sock = accept(socket_desc, (struct sockaddr *) &client, (socklen_t*) & c); //accept connection from an incoming client
     while ((read_size = recv(client_sock, client_message, 2000, 0)) > 0) { //Receive a message from client
-        string message = string(client_message).substr(0, 3);
-        char ipClient[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &client.sin_addr, ipClient, INET_ADDRSTRLEN);
-        Camera* cam = getCamByIp(ipClient);
+        string message = string(client_message).substr(0, string(client_message).size() - 1);
+        char ipClient[INET_ADDRSTRLEN]; // Set a char[] that will contain the ip adress of the sender in binary
+        inet_ntop(AF_INET, &client.sin_addr, ipClient, INET_ADDRSTRLEN); // Convert the adress from binary to string
+        Camera* cam = getCamByIp(ipClient); // Try to find a camera that has that IP
         if (cam != NULL && message == "mvt") { // Make sure the good message comes from a camera
             std::ofstream out;
             string pathToFile = "";
@@ -340,8 +327,7 @@ void Manager::detectMvmt() {
             pathToFile = date + "/C" + to_string(cam->GetID()) + "-" + to_string(nowTime->tm_year + 1900) + month + day + ".mvt";
             out.open(pathToFile.c_str(), std::ios::app);
             const boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time();
-            // Get the time offset in current day
-            const boost::posix_time::time_duration td = now.time_of_day();
+            const boost::posix_time::time_duration td = now.time_of_day(); // Get the time offset in current day
             const long hours = td.hours(); // Current hour
             const long minutes = td.minutes(); // Current minute
             const long seconds = td.seconds(); // Current seconds
@@ -374,7 +360,7 @@ void Manager::detectMvmt() {
         }
     }
     close(socket_desc);
-    m_ip.unlock();
+    m_ip.unlock(); // Allow to start a new bind
 }
 
 void Manager::getListenPort() {
@@ -397,7 +383,7 @@ void Manager::getListenPort() {
 Camera * Manager::getCamByIp(string ip) {
     for (Camera* cam : CameraList) {
         if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) { //get IP by cuttin the port and following
-            return cam;
+            return cam; // return the found camera
         }
     }
     return NULL; // Return NULL if no camera has that IP
@@ -406,7 +392,7 @@ Camera * Manager::getCamByIp(string ip) {
 /* Reboot thread that will move files from buffer to definitive directory if crashed */
 void Manager::runBufferDir() {
     if (bufferDirList.size() > 0) {
-        int nbMin = bufferDirList.at(0)->nbMin; // gets the number of minutes between move
+        int nbMin = bufferDirList.at(0).nbMin; // gets the number of minutes between move
         sleep(10);
         while (1) {
             if (secondsSinceDate(runningBufferMove) > nbMin * 3) { // wait for 3 loop before checking

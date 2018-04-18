@@ -5,14 +5,9 @@
  * Created on 3 janvier 2018, 10:21
  */
 
-#include <sys/stat.h>
-#include <string>
-#include <unistd.h>
-#include <iostream>
-#include "Manager.h"
 #include "Camera.h"
+#include <string>
 #include "Utility.h"
-#include <boost/date_time/posix_time/posix_time.hpp>
 extern "C" {
 #include <sodium.h>
 #include <libavcodec/avcodec.h>
@@ -79,10 +74,9 @@ void Camera::record() {
     avcodec_register_all(); // Register all the codecs, parsers and bitstream filters
     bool error = false; // Don't start recording if an error was encountered
     int averr = avformat_open_input(&context, link.c_str(), NULL, NULL);
-    if (averr != 0) { //open rtsp
+    if (averr != 0) { // open rtsp worked
         if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
-            sendEmail("Couldn't connect to the camera " + to_string(this->ID) + " of url " + this->url); // mail if camera is unreachable
-            cout << "avformat open input" << endl;
+            sendEmail("Couldn't connect to the camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url); // mail if camera is unreachable
             addCrashedCamera(this->ID);
         }
         error = true;
@@ -93,8 +87,7 @@ void Camera::record() {
         averr = avformat_find_stream_info(context, NULL);
         if (averr < 0) { // retrieve informations of the stream
             if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
-                sendEmail("Couldn't retrieve informations for the camera " + to_string(this->ID) + " of url " + this->url);
-                cout << "avformat_find_stream_info" << endl;
+                sendEmail("Couldn't retrieve informations for the camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url);
                 addCrashedCamera(this->ID);
             }
             error = true;
@@ -108,26 +101,24 @@ void Camera::record() {
         }
         AVOutputFormat* fmt;
         AVFormatContext* oc;
-        string fullName = destinationDirectory + getFileName();
-        averr = avformat_alloc_output_context2(&oc, NULL, NULL, getFileName().c_str());
-        if (!oc) {
-            avformat_alloc_output_context2(&oc, NULL, "mp4", getFileName().c_str());
+        string fullName = destinationDirectory + getFileName(); // Store the absolute path to the file
+        averr = avformat_alloc_output_context2(&oc, NULL, NULL, getFileName().c_str()); // try to create a context based on stream info and file name
+        if (!oc) { // If no context was found
+            avformat_alloc_output_context2(&oc, NULL, "mp4", getFileName().c_str()); // try to create a context based on stream info and file name on mp4 format
         }
-        if (!oc) {
+        if (!oc) { // No format could be found
             error = true;
-            cout << "avformat_alloc_output_context2" << endl;
             addLog(getAvError(averr));
         }
         if (!error) {
             fmt = oc->oformat;
             if (!(fmt->flags & AVFMT_NOFILE)) {
                 averr = avio_open(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE); //open output file
-                if (averr < 0) {
-                    error = true;
-                    createDirectoryVideos(this->directory);
+                if (averr < 0) { // File couldn't be created
+                    createDirectoryVideos(this->directory); // Try to recreate the directories
                     averr = avio_open(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE); //open output file
                     if (averr < 0) {
-                        cout << "avio_open : " << fullName.c_str() << endl;
+                        error = true;
                         addLog(getAvError(averr));
                     }
                 }
@@ -138,9 +129,8 @@ void Camera::record() {
                 avcodec_copy_context(stream->codec, context->streams[video_stream_index]->codec); // set infos to the camera's ones
                 stream->sample_aspect_ratio = context->streams[video_stream_index]->codec->sample_aspect_ratio; //set the file dimensions ratio
                 int averr = avformat_write_header(oc, NULL); // write the header in the out file
-                if (averr < 0) {
+                if (averr < 0) { // Header couldn't be written
                     error = true;
-                    cout << "avformat_write_header" << endl;
                     addLog(getAvError(averr));
                 }
             }
@@ -148,25 +138,29 @@ void Camera::record() {
                 bool recordNext = false; // start only one other recording
                 time_t t = time(0);
                 long int secondsToStop = time(&t) + SecondsToRecord; // save when to stop recording this video
+                int lostframe = 0; // Saves the number of frames lost
                 while (time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
-                    if (!IsInRunningList(to_string(this->ID))) {
-                        addRunningCamera(to_string(this->ID));
+                    if (!IsInRunningList(to_string(this->ID))) { // If the camera isn't in the list of running cameras
+                        addRunningCamera(to_string(this->ID)); // Add itself to it
                     }
-                    if (av_read_frame(context, &packet) < 0) {
-                        if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
-                            sendEmail("The camera " + to_string(this->ID) + " of url " + this->url + " stopped sending informations");
+                    if (av_read_frame(context, &packet) < 0) { // Read each frame and store it into packet
+                        lostframe++;
+                        if (lostframe > 60 && timeSinceCrashCamera(this->ID) > 10 * 60) { // Stop if more than 60 images are lost && don't send 2 mails in less than 10 min
+                            sendEmail("The camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url + " stopped sending informations");
                             addCrashedCamera(this->ID);
                             break;
                         }
+                    } else { // Packet has been read
+                        lostframe = 0; // Reinit number of lost packet
+                        if (packet.stream_index == video_stream_index) { //check if the packet is a video
+                            av_write_frame(oc, &packet); // write the frame in the out file
+                        }
+                        if (!recordNext && time(&t) + TIME_BEFORE_NEW_RECORD == secondsToStop) { // If no other record has been started and it's time to start one
+                            thread(&Camera::record, this); // Start a new record for the same camera in a new thread
+                            recordNext = true; // Store the fact that an other record has been started
+                        }
+                        av_free_packet(&packet); // clear the packet
                     }
-                    if (packet.stream_index == video_stream_index) { //check if the packet is a video
-                        av_write_frame(oc, &packet); // write the frame in the out file
-                    }
-                    if (!recordNext && time(&t) + 6 == secondsToStop) {
-                        thread(&Camera::record, this);
-                        recordNext = true;
-                    }
-                    av_free_packet(&packet); // clear the packet
                 }
                 averr = av_write_trailer(oc); // write the trailer in the out file
                 if (averr != 0) {
@@ -179,17 +173,18 @@ void Camera::record() {
                 }
                 avformat_free_context(oc);
                 av_free_packet(&packet);
-                avformat_close_input(&context);
+                avformat_close_input(&context); // Clost the RTSP connexion
                 // ----------------------------- //
             }
         } else {
-            sendEmail("Couldn't start writing the file for the camera " + to_string(this->ID) + " of url " + this->url);
+            sendEmail("Couldn't start writing the file for the camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url);
             addCrashedCamera(this->ID);
         }
     }
 }
 
 Camera::~Camera() {
+    cout << "test " << ID << endl;
 }
 
 string Camera::GetDirectory() const {
@@ -198,14 +193,6 @@ string Camera::GetDirectory() const {
 
 int Camera::GetID() const {
     return this->ID;
-}
-
-string Camera::GetLog() const {
-    return this->log;
-}
-
-string Camera::GetName() const {
-    return this->name;
 }
 
 int Camera::GetNbdays() const {
@@ -221,8 +208,7 @@ string Camera::GetUrl() const {
 }
 
 string Camera::getFileName() {
-    const boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time();
-    // Get the time offset in current day
+    const boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time(); // Get the time offset in current day
     const boost::posix_time::time_duration td = now.time_of_day();
     const long hours = td.hours(); // Current hour
     const long minutes = td.minutes(); // Current minute

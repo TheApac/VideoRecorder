@@ -3,15 +3,11 @@
  * and open the template in the editor.
  */
 
+#include "Utility.h"
 #include <string>
-#include <unistd.h>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <cstring>
-#include <time.h>
 #include <string>
-#include <fstream>
-#include "Utility.h"
 #include "CustomException.h"
 #include <curl/curl.h>
 #include <iostream>
@@ -49,35 +45,6 @@ bool isOnlyNumeric(string &str) {
         }
     }
     return true; // return true if end of function is reached
-}
-
-static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) {
-    struct upload_status *upload_ctx = (struct upload_status *) userp;
-    const char *data;
-    if ((size == 0) || (nmemb == 0) || ((size * nmemb) < 1)) {
-        return 0;
-    }
-    const char *payload_text[] = {// table with every element to send
-        defineDate().c_str(),
-        "To: " TO_MAIL "\r\n", //sender
-        "From: " FROM_MAIL "\r\n", //recipient
-        "Message-ID: <error-ManagerVideo@no-reply@2n-tech.com>\r\n",
-        "Subject: An error occured\r\n", // Object of the email
-        "\r\n", /* empty line to divide headers from body*/
-        /* start of the email body
-         Could add as many line as wanted, even empty ones*/
-        mailContent.c_str(),
-        /* End of email body*/
-        NULL //end of the email
-    };
-    data = payload_text[upload_ctx->lines_read];
-    if (data) {
-        size_t len = strlen(data);
-        memcpy(ptr, data, len);
-        upload_ctx->lines_read++;
-        return len;
-    }
-    return 0;
 }
 
 /* Return the date line to include in the mail */
@@ -145,6 +112,35 @@ static string defineDate() {
         date += "0" + to_string(now->tm_sec);
     }
     return "Date :" + date + "\r\n"; // format the date for an email
+}
+
+static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) {
+    struct upload_status *upload_ctx = (struct upload_status *) userp;
+    const char *data;
+    if ((size == 0) || (nmemb == 0) || ((size * nmemb) < 1)) {
+        return 0;
+    }
+    const char *payload_text[] = {// table with every element to send
+        defineDate().c_str(),
+        "To: " TO_MAIL "\r\n", //sender
+        "From: " FROM_MAIL "\r\n", //recipient
+        "Message-ID: <error-ManagerVideo@no-reply@2n-tech.com>\r\n",
+        "Subject: An error occured\r\n", // Object of the email
+        "\r\n", /* empty line to divide headers from body*/
+        /* start of the email body
+         Could add as many line as wanted, even empty ones*/
+        mailContent.c_str(),
+        /* End of email body*/
+        NULL //end of the email
+    };
+    data = payload_text[upload_ctx->lines_read];
+    if (data) {
+        size_t len = strlen(data);
+        memcpy(ptr, data, len);
+        upload_ctx->lines_read++;
+        return len;
+    }
+    return 0;
 }
 
 int sendEmail(string messageContent) {
@@ -364,8 +360,7 @@ int configureSMTP() {
         cerr << directoryOfFiles << "/ConfigFiles/2NWatchDog.ini was not found" << endl;
     }
     string line;
-    //iterate through the file while the configuration isn't over
-    while (getline(file, line) && (urlSMTP == "" || loginSMTP == "" || passwordSMTP == "")) {
+    while (getline(file, line) && (urlSMTP == "" || loginSMTP == "" || passwordSMTP == "")) { // iterate through the file while the configuration isn't over
         if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
             string parameterName = line.substr(0, line.find_first_of("="));
             if (parameterName == "serveur_smtp") {
@@ -450,19 +445,6 @@ void addRunningCamera(string ID) {
     v_mutex.unlock();
 }
 
-int getRunningCameraSize() {
-    v_mutex.lock();
-    int size = 0;
-    struct node_t * nodeSearch = nullptr;
-    nodeSearch = RunningCameraList;
-    while (nodeSearch != NULL) {
-        nodeSearch = nodeSearch->next;
-        size++;
-    }
-    v_mutex.unlock();
-    return size;
-}
-
 bool IsInRunningList(string ID) {
     v_mutex.lock();
     struct node_t *nodeSearch = nullptr;
@@ -511,19 +493,6 @@ bool isRunningManager() {
         return true;
     }
     return false;
-}
-
-/* Delete each node of a singly linked list */
-void CleanUpNodes() {
-    CleanUpNodesRec(RunningCameraList);
-}
-
-/* Recursive delete of the nodes */
-void CleanUpNodesRec(node_t* head) {
-    if (head->next) {
-        CleanUpNodesRec(head->next);
-    }
-    delete head;
 }
 
 void removeOldCrashedCameras() {
@@ -580,20 +549,22 @@ void addCrashedCamera(int ID) {
 }
 
 void startMoveFromBuffer(int nbdays) {
-    int nbMin = bufferDirList.at(1)->nbMin;
-    for (bufferDir* buff : bufferDirList) {
-        thread(MoveForEachDir, buff->defDir, nbdays); // Start a thread for each final directory
+    if (bufferDirList.size() > 0) {
+        int nbMin = bufferDirList.at(0).nbMin;
+        for (bufferDir buff : bufferDirList) {
+            thread(MoveForEachDir, buff.defDir, nbdays); // Start a thread for each final directory
+        }
+        sleep(nbMin);
     }
-    sleep(nbMin);
 }
 
 void MoveForEachDir(string defDir, int nbdays) {
     map<int, string> bufferMap;
     int nbMin;
-    for (bufferDir* buf : bufferDirList) { // Iterate to find the good bufferDir
-        if (buf->defDir == defDir) { // Saves the infos
-            bufferMap = buf->listBuffer;
-            nbMin = buf->nbMin;
+    for (bufferDir buf : bufferDirList) { // Iterate to find the good bufferDir
+        if (buf.defDir == defDir) { // Saves the infos
+            bufferMap = buf.listBuffer;
+            nbMin = buf.nbMin;
         }
     }
     while (1) { // every nbMin, move the files recorded from the right cam from each tempDir in the bufferMap to defDir
@@ -679,18 +650,18 @@ void addBufferDir(int nbmin, string defDir, string tempDir, int IDCam) {
         tempDir = tempDir + "/";
     }
     bool found = false;
-    for (bufferDir* bufferdirs : bufferDirList) { // try to find if an item exist for defDir
-        if (bufferdirs->defDir == defDir) {
+    for (bufferDir bufferdirs : bufferDirList) { // try to find if an item exist for defDir
+        if (bufferdirs.defDir == defDir) {
             found = true;
-            bufferdirs->listBuffer[IDCam] = tempDir; // update its map
+            bufferdirs.listBuffer[IDCam] = tempDir; // update its map
             break;
         }
     }
     if (!found) { // don't add it if exist
-        bufferDir *temp = new bufferDir;
-        temp->defDir = defDir;
-        temp->nbMin = nbmin;
-        temp->listBuffer[IDCam] = tempDir;
+        bufferDir temp; // = new bufferDir;
+        temp.defDir = defDir;
+        temp.nbMin = nbmin;
+        temp.listBuffer[IDCam] = tempDir;
         bufferDirList.push_back(temp); // Add a new item for defDir
     }
 }
@@ -701,18 +672,17 @@ int getSizeListBuffDir() {
 
 string getPathForCameraID(int ID) {
     int indexVec = 0;
-    string pathToFile = "";
-    while (indexVec < getSizeListBuffDir() && pathToFile == "") {
+    while (indexVec < getSizeListBuffDir()) {
         try {
-            if (bufferDirList.at(indexVec)->listBuffer[ID] != "") {
-                pathToFile = bufferDirList.at(indexVec)->defDir;
+            if (bufferDirList.at(indexVec).listBuffer[ID] != "") {
+                return bufferDirList.at(indexVec).defDir;
             }
             indexVec++;
         } catch (std::exception const& e) {
             indexVec++;
         }
     }
-    return pathToFile;
+    return "";
 }
 
 void addLog(string log) {
@@ -723,12 +693,11 @@ void addLog(string log) {
     out.open(logFileName.c_str(), std::ios::app);
     if (log != "Success") { // Don't print code Success in log
         out << currentDate() << " : " << log << "\r\n";
-        cout << currentDate() << " : " << log << "\r\n";
     }
     out.close();
 }
 
-string getAvError(int errorCode) {
+string getAvError(int& errorCode) {
     if (errorCode < 0) {
         errorCode = -errorCode;
     }
@@ -743,5 +712,5 @@ string getAvError(int errorCode) {
 
 long int remainingFreeSpace(string path) {
     boost::filesystem::space_info si = boost::filesystem::space(path);
-    return si.available / 1024 / 1024;
+    return si.available / 1024 / 1024; // Bytes -> Kilobytes -> Megabytes
 }
