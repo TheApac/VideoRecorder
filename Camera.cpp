@@ -72,6 +72,7 @@ void Camera::record() {
     av_init_packet(&packet);
     av_register_all(); // Initialize libavformat and register all the muxers
     avcodec_register_all(); // Register all the codecs, parsers and bitstream filters
+    avformat_network_init();
     bool error = false; // Don't start recording if an error was encountered
     int averr = avformat_open_input(&context, link.c_str(), NULL, NULL);
     if (averr != 0) { // open rtsp worked
@@ -141,11 +142,12 @@ void Camera::record() {
                 int lostframe = 0; // Saves the number of frames lost
                 while (time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
                     if (!IsInRunningList(to_string(this->ID))) { // If the camera isn't in the list of running cameras
-                        addRunningCamera(to_string(this->ID)); // Add itself to it
+                        thread(addRunningCamera, to_string(this->ID)); // Add itself to it
                     }
                     if (av_read_frame(context, &packet) < 0) { // Read each frame and store it into packet
+                        sleep(1);
                         lostframe++;
-                        if (lostframe > 60 && timeSinceCrashCamera(this->ID) > 10 * 60) { // Stop if more than 60 images are lost && don't send 2 mails in less than 10 min
+                        if (lostframe > 20 && timeSinceCrashCamera(this->ID) > 10 * 60) { // Stop if more than 60 images are lost && don't send 2 mails in less than 10 min
                             sendEmail("The camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url + " stopped sending informations");
                             addCrashedCamera(this->ID);
                             break;
@@ -184,7 +186,6 @@ void Camera::record() {
 }
 
 Camera::~Camera() {
-    cout << "test " << ID << endl;
 }
 
 string Camera::GetDirectory() const {

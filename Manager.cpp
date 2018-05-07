@@ -247,6 +247,7 @@ void Manager::startRecords() {
         boost::thread(&Camera::record, camera); // Start the record in a new thread
         sleep(nbSecBetweenRecords); // wait between the start of each record
     }
+    boost::thread(preventMutexHoldLocked);
     while (1) { // make sure every camera is still recording
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
         for (Camera *camera : CameraList) {

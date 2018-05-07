@@ -31,6 +31,8 @@ string loginSMTP = "";
 string passwordSMTP = "";
 string urlSMTP = "";
 string SiteLocation = "";
+string lastLockCrash = "2010-01-01-00-00-00";
+string lastLockV = "2010-01-01-00-00-00";
 
 class Camera {
 public:
@@ -438,6 +440,7 @@ bool setLocation(string location) {
 
 void addRunningCamera(string ID) {
     v_mutex.lock();
+    lastLockV = currentDate();
     struct node_t* newNode = new node_t;
     newNode->value = ID;
     newNode->next = RunningCameraList;
@@ -447,6 +450,7 @@ void addRunningCamera(string ID) {
 
 bool IsInRunningList(string ID) {
     v_mutex.lock();
+    lastLockV = currentDate();
     struct node_t *nodeSearch = nullptr;
     nodeSearch = RunningCameraList; // save the head of the list
     if (nodeSearch == NULL) {
@@ -466,6 +470,7 @@ bool IsInRunningList(string ID) {
 
 void deleteNode(string valueToDelete) {
     v_mutex.lock();
+    lastLockV = currentDate();
     struct node_t* nodeSearch = nullptr;
     struct node_t* previous = nullptr;
     nodeSearch = RunningCameraList;
@@ -497,6 +502,7 @@ bool isRunningManager() {
 
 void removeOldCrashedCameras() {
     mutex_crashed.lock();
+    lastLockCrash = currentDate();
     vector<string> CrashedCameraListCopy = CrashedCameraList;
     int index = 0; //keep the position of the camera
     for (string cameraInfo : CrashedCameraListCopy) {
@@ -512,6 +518,7 @@ void removeOldCrashedCameras() {
 
 bool didCameraCrash(int ID) {
     mutex_crashed.lock();
+    lastLockCrash = currentDate();
     int index = 0;
     while (index != CrashedCameraList.size()) {
         if (CrashedCameraList[index].substr(0, CrashedCameraList[index].find_first_of('-')) == to_string(ID)) {
@@ -530,6 +537,7 @@ int timeSinceCrashCamera(int IDCam) {
         return 9999999;
     }
     mutex_crashed.lock();
+    lastLockCrash = currentDate();
     int index = 0;
     while (index != CrashedCameraList.size()) { // iterate through the list
         if (CrashedCameraList.at(index).substr(0, CrashedCameraList.at(index).find_first_of('-')) == to_string(IDCam)) { // if good camera
@@ -543,6 +551,7 @@ int timeSinceCrashCamera(int IDCam) {
 void addCrashedCamera(int ID) {
     if (!didCameraCrash(ID)) {
         mutex_crashed.lock();
+        lastLockCrash = currentDate();
         CrashedCameraList.push_back(to_string(ID) + "-" + currentDate());
         mutex_crashed.unlock();
     }
@@ -713,4 +722,17 @@ string getAvError(int& errorCode) {
 long int remainingFreeSpace(string path) {
     boost::filesystem::space_info si = boost::filesystem::space(path);
     return si.available / 1024 / 1024; // Bytes -> Kilobytes -> Megabytes
+}
+
+void preventMutexHoldLocked() {
+    sleep(60);
+    while (1) {
+        if (secondsSinceDate(lastLockCrash) > 60 * 2) {
+            mutex_crashed.unlock();
+        }
+        if (secondsSinceDate(lastLockV) > 60 * 2) {
+            v_mutex.unlock();
+        }
+        sleep(60);
+    }
 }

@@ -81,5 +81,6 @@ string getPathForCameraID(int ID); // Return the path where the record of camera
 void addLog(string log); // Add a line in the log file
 string getAvError(int& errorCode); // Return a string with explanation of AVERROR from its code
 long int remainingFreeSpace(string path); // Return the number of free Mo at the path given in parameter
+void preventMutexHoldLocked(); // Make sure the mutexes don't stay lock in case of crash
 
 #endif /* UTILITY_H */
