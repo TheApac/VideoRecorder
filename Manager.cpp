@@ -177,7 +177,7 @@ void Manager::CameraOver(int &enregistrable) {
         nbdays = DEFAULT_DAYS_TO_KEEP;
     }
     if (ID != -1 && name != "" && log != "" && password != "" && url != "" && enregistrable != -1) {
-        for (Camera* camera : CameraList) {
+        for (const auto &camera : CameraList) {
             if (camera->GetID() == ID) { // Make sure there is not two cameras with the same ID
                 throw DuplicateID(to_string(ID));
             }
@@ -185,13 +185,13 @@ void Manager::CameraOver(int &enregistrable) {
         if (enregistrable == 1 && path != "") { // If all the fields are completed and the camera can be recorded
             mutex_camlist.lock();
             if (tempPath != "") {
-                CameraList.push_back(new Camera(tempPath, ID, name, log, password, url));
+                CameraList.push_back(make_shared<Camera>(tempPath, ID, name, log, password, url));
                 if (nbMinBetweenMoveBuffer == -1) {
                     nbMinBetweenMoveBuffer = DEFAULT_TIME_BUFFER_MOVE; // If there is no number of minute between each move from buffer memory, default (60) is applied
                 }
                 addBufferDir(nbMinBetweenMoveBuffer, path, tempPath, ID);
             } else {
-                CameraList.push_back(new Camera(path, nbdays, ID, name, log, password, url)); // Create a list of camera
+                CameraList.push_back(make_shared<Camera>(path, nbdays, ID, name, log, password, url)); // Create a list of camera
             }
             mutex_camlist.unlock();
         } else if (enregistrable == 1 && path != "") {
@@ -227,9 +227,6 @@ void Manager::CameraOver(int &enregistrable) {
 }
 
 Manager::~Manager() {
-    for (bufferDir buff : bufferDirList) {
-        buff.listBuffer.clear();
-    }
 }
 
 /* Start to record each cameras
@@ -243,14 +240,14 @@ void Manager::startRecords() {
     boost::thread(startMoveFromBuffer, nbdays);
     boost::thread(runBufferDir);
     boost::thread(&Manager::startMvmtDetect, this);
-    for (Camera *camera : CameraList) {
+    for (const auto &camera : CameraList) {
         boost::thread(&Camera::record, camera); // Start the record in a new thread
         sleep(nbSecBetweenRecords); // wait between the start of each record
     }
     boost::thread(preventMutexHoldLocked);
     while (1) { // make sure every camera is still recording
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
-        for (Camera *camera : CameraList) {
+        for (const auto &camera : CameraList) {
             if (!IsInRunningList(to_string(camera->GetID()))) { // If the camera isn't running
                 if (timeSinceCrashCamera(camera->GetID()) > 10 * 60) { // Don't send 2 mails in less than 10 min
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
@@ -304,7 +301,7 @@ void Manager::detectMvmt() {
         string message = string(client_message).substr(0, string(client_message).size() - 1);
         char ipClient[INET_ADDRSTRLEN]; // Set a char[] that will contain the ip adress of the sender in binary
         inet_ntop(AF_INET, &client.sin_addr, ipClient, INET_ADDRSTRLEN); // Convert the adress from binary to string
-        Camera* cam = getCamByIp(ipClient); // Try to find a camera that has that IP
+        shared_ptr<Camera> cam = getCamByIp(ipClient); // Try to find a camera that has that IP
         if (cam != NULL && message == "mvt") { // Make sure the good message comes from a camera
             std::ofstream out;
             string pathToFile = "";
@@ -381,8 +378,8 @@ void Manager::getListenPort() {
 }
 
 /* Return the camera from its IP */
-Camera * Manager::getCamByIp(string ip) {
-    for (Camera* cam : CameraList) {
+shared_ptr<Camera> Manager::getCamByIp(string ip) {
+    for (const auto &cam : CameraList) {
         if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) { //get IP by cuttin the port and following
             return cam; // return the found camera
         }

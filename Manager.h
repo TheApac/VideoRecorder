@@ -16,6 +16,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include "Camera.h"
 
 using namespace std;
@@ -27,7 +28,7 @@ public:
     virtual ~Manager();
 private:
     void CameraOver(int &enregistrable);
-    vector<Camera*> CameraList; /* Save each camera in a vector to run their record function after they all have been initialized */
+    vector<shared_ptr<Camera>> CameraList; /* Save each camera in a vector to run their record function after they all have been initialized */
     /* Keep the value of the camera fields while creating them */
     int nbdays;
     int ID;
@@ -45,7 +46,7 @@ private:
     void startMvmtDetect(); // Start a new thread waiting for a tcp message
     void detectMvmt(); // Wait for a TCP notification and check if the message is good and coming from a camera
     void getListenPort(); // Retrieve the port where notification are sent
-    Camera* getCamByIp(string ip); // Return a camera from an IP, NULL if no camera is found
+    shared_ptr<Camera> getCamByIp(string ip); // Return a camera from an IP, NULL if no camera is found
     void runBufferDir(); // Reboot thread that will move files from buffer to definitive directory if crashed
 };
 

@@ -667,7 +667,7 @@ void addBufferDir(int nbmin, string defDir, string tempDir, int IDCam) {
         }
     }
     if (!found) { // don't add it if exist
-        bufferDir temp; // = new bufferDir;
+        bufferDir temp;
         temp.defDir = defDir;
         temp.nbMin = nbmin;
         temp.listBuffer[IDCam] = tempDir;

@@ -44,7 +44,7 @@ Watchdog::Watchdog() {
                         file.close();
                         remove(fileName.c_str());
                         setLocation("");
-                        Manager *manager = new Manager();
+                        auto manager = make_shared<Manager>();
                         manager->startRecords();
                         exit(EXIT_SUCCESS);
                     }
@@ -65,7 +65,7 @@ Watchdog::Watchdog() {
                     lastMail = currentDate();
                     remove(fileName.c_str());
                     setLocation("");
-                    Manager *manager = new Manager();
+                    auto manager = make_shared<Manager>();
                     manager->startRecords();
                     exit(EXIT_SUCCESS);
                 }

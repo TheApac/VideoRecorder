@@ -32,15 +32,13 @@ int main() {
     }
     pid_t pid = fork();
     if (pid == 0) {
-        Manager *manager = new Manager();
+        auto manager = make_shared<Manager>();
         if (manager) {
             pid_t pid = fork();
             if (pid == 0) {
-                Watchdog *watchdog = new Watchdog();
-                delete watchdog;
+                auto watchdog = make_shared<Watchdog>();
             } else {
                 manager->startRecords();
-                delete manager;
             }
         }
     }
