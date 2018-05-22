@@ -14,6 +14,11 @@ extern "C" {
 #include <libavformat/avformat.h>
 }
 #include <boost/thread.hpp>
+#include "wsdd.nsmap"
+#include "plugin/wsseapi.h"
+#include "include/soapDeviceBindingProxy.h"
+#include "include/soapMediaBindingProxy.h"
+#include "include/soapRemoteDiscoveryBindingProxy.h"
 
 using namespace std;
 using namespace boost;
@@ -33,6 +38,7 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
     this->log = log;
     this->password = password;
     this->url = url;
+    this->RTSPurl = "";
 }
 
 Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& password, string& url) {
@@ -50,139 +56,145 @@ Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& pas
     this->log = log;
     this->password = password;
     this->url = url;
+    this->RTSPurl = "";
 }
 
 void Camera::record() {
-    if (nbdays != -1) {
-        int nbdaysTemp = nbdays - 1;
-        removeOldFile(nbdays, this->directory); // Remove the old files if it has to
-        if (remainingFreeSpace(this->directory) < AVERAGE_FILE_SIZE * SecondsToRecord / 60) { //make sure the camera has enough space to record
-            sendEmail("Not enough space left to record in : " + this->directory);
-            while (remainingFreeSpace(this->directory) < AVERAGE_FILE_SIZE * SecondsToRecord / 60) { //remove files until it has enough space
-                removeOldFile(nbdaysTemp, this->directory);
-                nbdaysTemp = nbdaysTemp - 1;
-            }
-        }
-    }
-    string destinationDirectory = createDirectoryVideos(this->directory); // Create the directory where the camera will record if it doesn't exist
-    string link = "rtsp://" + this->log + ":" + this->password + "@" + this->url;
-    int video_stream_index; // keep the index of the video stream
-    AVFormatContext* context = avformat_alloc_context();
-    AVPacket packet; // packet sent by the camera
-    av_init_packet(&packet);
-    av_register_all(); // Initialize libavformat and register all the muxers
-    avcodec_register_all(); // Register all the codecs, parsers and bitstream filters
-    avformat_network_init();
-    bool error = false; // Don't start recording if an error was encountered
-    int averr = avformat_open_input(&context, link.c_str(), NULL, NULL);
-    if (averr != 0) { // open rtsp worked
-        if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
-            sendEmail("Couldn't connect to the camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url); // mail if camera is unreachable
-            addCrashedCamera(this->ID);
-        }
-        error = true;
-    } else {
-        addLog(getAvError(averr));
-    }
-    if (!error) {
-        averr = avformat_find_stream_info(context, NULL);
-        if (averr < 0) { // retrieve informations of the stream
-            if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
-                sendEmail("Couldn't retrieve informations for the camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url);
-                addCrashedCamera(this->ID);
-            }
-            error = true;
-        }
-    }
-    if (!error) {
-        for (int i = 0; i < context->nb_streams; i++) { //search video stream
-            if (context->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
-                video_stream_index = i;
-            }
-        }
-        AVOutputFormat* fmt;
-        AVFormatContext* oc;
-        string fullName = destinationDirectory + getFileName(); // Store the absolute path to the file
-        averr = avformat_alloc_output_context2(&oc, NULL, NULL, getFileName().c_str()); // try to create a context based on stream info and file name
-        if (!oc) { // If no context was found
-            avformat_alloc_output_context2(&oc, NULL, "mp4", getFileName().c_str()); // try to create a context based on stream info and file name on mp4 format
-        }
-        if (!oc) { // No format could be found
-            error = true;
-            addLog(getAvError(averr));
-        }
-        if (!error) {
-            fmt = oc->oformat;
-            if (!(fmt->flags & AVFMT_NOFILE)) {
-                averr = avio_open(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE); //open output file
-                if (averr < 0) { // File couldn't be created
-                    createDirectoryVideos(this->directory); // Try to recreate the directories
-                    averr = avio_open(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE); //open output file
-                    if (averr < 0) {
-                        error = true;
-                        addLog(getAvError(averr));
-                    }
-                }
-            }
-            if (!error) {
-                AVStream* stream = NULL;
-                stream = avformat_new_stream(oc, context->streams[video_stream_index]->codec->codec); // save which stream to mux
-                avcodec_copy_context(stream->codec, context->streams[video_stream_index]->codec); // set infos to the camera's ones
-                stream->sample_aspect_ratio = context->streams[video_stream_index]->codec->sample_aspect_ratio; //set the file dimensions ratio
-                int averr = avformat_write_header(oc, NULL); // write the header in the out file
-                if (averr < 0) { // Header couldn't be written
-                    error = true;
-                    addLog(getAvError(averr));
-                }
-            }
-            if (!error) {
-                bool recordNext = false; // start only one other recording
-                time_t t = time(0);
-                long int secondsToStop = time(&t) + SecondsToRecord; // save when to stop recording this video
-                int lostframe = 0; // Saves the number of frames lost
-                while (time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
-                    if (!IsInRunningList(to_string(this->ID))) { // If the camera isn't in the list of running cameras
-                        thread(addRunningCamera, to_string(this->ID)); // Add itself to it
-                    }
-                    if (av_read_frame(context, &packet) < 0) { // Read each frame and store it into packet
-                        sleep(1);
-                        lostframe++;
-                        if (lostframe > 20 && timeSinceCrashCamera(this->ID) > 10 * 60) { // Stop if more than 60 images are lost && don't send 2 mails in less than 10 min
-                            sendEmail("The camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url + " stopped sending informations");
-                            addCrashedCamera(this->ID);
-                            break;
-                        }
-                    } else { // Packet has been read
-                        lostframe = 0; // Reinit number of lost packet
-                        if (packet.stream_index == video_stream_index) { //check if the packet is a video
-                            av_write_frame(oc, &packet); // write the frame in the out file
-                        }
-                        if (!recordNext && time(&t) + TIME_BEFORE_NEW_RECORD == secondsToStop) { // If no other record has been started and it's time to start one
-                            thread(&Camera::record, this); // Start a new record for the same camera in a new thread
-                            recordNext = true; // Store the fact that an other record has been started
-                        }
-                        av_free_packet(&packet); // clear the packet
-                    }
-                }
-                averr = av_write_trailer(oc); // write the trailer in the out file
-                if (averr != 0) {
-                    addLog(getAvError(averr));
-                }
-                // ---------- CLEANUP ---------- //
-                averr = avio_closep(&oc->pb);
-                if (averr != 0) {
-                    addLog(getAvError(averr));
-                }
-                avformat_free_context(oc);
-                av_free_packet(&packet);
-                avformat_close_input(&context); // Clost the RTSP connexion
-                // ----------------------------- //
-            }
-        } else {
-            sendEmail("Couldn't start writing the file for the camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url);
-            addCrashedCamera(this->ID);
-        }
-    }
+    getFullRTSPUrl();
+    sleep(2);
+    cout << this->RTSPurl << endl;
+    //    if (RTSPurl != "") {
+    //        if (nbdays != -1) {
+    //            int nbdaysTemp = nbdays - 1;
+    //            removeOldFile(nbdays, this->directory); // Remove the old files if it has to
+    //            if (remainingFreeSpace(this->directory) < AVERAGE_FILE_SIZE * SecondsToRecord / 60) { //make sure the camera has enough space to record
+    //                sendEmail("Not enough space left to record in : " + this->directory);
+    //                while (remainingFreeSpace(this->directory) < AVERAGE_FILE_SIZE * SecondsToRecord / 60) { //remove files until it has enough space
+    //                    removeOldFile(nbdaysTemp, this->directory);
+    //                    nbdaysTemp = nbdaysTemp - 1;
+    //                }
+    //            }
+    //        }
+    //        string destinationDirectory = createDirectoryVideos(this->directory); // Create the directory where the camera will record if it doesn't exist
+    //        string link = "rtsp://" + this->log + ":" + this->password + "@" + this->url;
+    //        int video_stream_index; // keep the index of the video stream
+    //        AVFormatContext* context = avformat_alloc_context();
+    //        AVPacket packet; // packet sent by the camera
+    //        av_init_packet(&packet);
+    //        av_register_all(); // Initialize libavformat and register all the muxers
+    //        avcodec_register_all(); // Register all the codecs, parsers and bitstream filters
+    //        avformat_network_init();
+    //        bool error = false; // Don't start recording if an error was encountered
+    //        int averr = avformat_open_input(&context, link.c_str(), NULL, NULL);
+    //        if (averr != 0) { // open rtsp worked
+    //            if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
+    //                sendEmail("Couldn't connect to the camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url); // mail if camera is unreachable
+    //                addCrashedCamera(this->ID);
+    //            }
+    //            error = true;
+    //        } else {
+    //            addLog(getAvError(averr));
+    //        }
+    //        if (!error) {
+    //            averr = avformat_find_stream_info(context, NULL);
+    //            if (averr < 0) { // retrieve informations of the stream
+    //                if (timeSinceCrashCamera(this->ID) > 10 * 60) { // Don't send 2 mails in less than 10 min
+    //                    sendEmail("Couldn't retrieve informations for the camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url);
+    //                    addCrashedCamera(this->ID);
+    //                }
+    //                error = true;
+    //            }
+    //        }
+    //        if (!error) {
+    //            for (int i = 0; i < context->nb_streams; i++) { //search video stream
+    //                if (context->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+    //                    video_stream_index = i;
+    //                }
+    //            }
+    //            AVOutputFormat* fmt;
+    //            AVFormatContext* oc;
+    //            string fullName = destinationDirectory + getFileName(); // Store the absolute path to the file
+    //            averr = avformat_alloc_output_context2(&oc, NULL, NULL, getFileName().c_str()); // try to create a context based on stream info and file name
+    //            if (!oc) { // If no context was found
+    //                avformat_alloc_output_context2(&oc, NULL, "mp4", getFileName().c_str()); // try to create a context based on stream info and file name on mp4 format
+    //            }
+    //            if (!oc) { // No format could be found
+    //                error = true;
+    //                addLog(getAvError(averr));
+    //            }
+    //            if (!error) {
+    //                fmt = oc->oformat;
+    //                if (!(fmt->flags & AVFMT_NOFILE)) {
+    //                    averr = avio_open(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE); //open output file
+    //                    if (averr < 0) { // File couldn't be created
+    //                        createDirectoryVideos(this->directory); // Try to recreate the directories
+    //                        averr = avio_open(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE); //open output file
+    //                        if (averr < 0) {
+    //                            error = true;
+    //                            addLog(getAvError(averr));
+    //                        }
+    //                    }
+    //                }
+    //                if (!error) {
+    //                    AVStream* stream = NULL;
+    //                    stream = avformat_new_stream(oc, context->streams[video_stream_index]->codec->codec); // save which stream to mux
+    //                    avcodec_copy_context(stream->codec, context->streams[video_stream_index]->codec); // set infos to the camera's ones
+    //                    stream->sample_aspect_ratio = context->streams[video_stream_index]->codec->sample_aspect_ratio; //set the file dimensions ratio
+    //                    int averr = avformat_write_header(oc, NULL); // write the header in the out file
+    //                    if (averr < 0) { // Header couldn't be written
+    //                        error = true;
+    //                        addLog(getAvError(averr));
+    //                    }
+    //                }
+    //                if (!error) {
+    //                    bool recordNext = false; // start only one other recording
+    //                    time_t t = time(0);
+    //                    long int secondsToStop = time(&t) + SecondsToRecord; // save when to stop recording this video
+    //                    int lostframe = 0; // Saves the number of frames lost
+    //                    while (time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
+    //                        if (!IsInRunningList(to_string(this->ID))) { // If the camera isn't in the list of running cameras
+    //                            thread(addRunningCamera, to_string(this->ID)); // Add itself to it
+    //                        }
+    //                        if (av_read_frame(context, &packet) < 0) { // Read each frame and store it into packet
+    //                            sleep(1);
+    //                            lostframe++;
+    //                            if (lostframe > 20 && timeSinceCrashCamera(this->ID) > 10 * 60) { // Stop if more than 60 images are lost && don't send 2 mails in less than 10 min
+    //                                sendEmail("The camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url + " stopped sending informations");
+    //                                addCrashedCamera(this->ID);
+    //                                break;
+    //                            }
+    //                        } else { // Packet has been read
+    //                            lostframe = 0; // Reinit number of lost packet
+    //                            if (packet.stream_index == video_stream_index) { //check if the packet is a video
+    //                                av_write_frame(oc, &packet); // write the frame in the out file
+    //                            }
+    //                            if (!recordNext && time(&t) + TIME_BEFORE_NEW_RECORD == secondsToStop) { // If no other record has been started and it's time to start one
+    //                                thread(&Camera::record, this); // Start a new record for the same camera in a new thread
+    //                                recordNext = true; // Store the fact that an other record has been started
+    //                            }
+    //                            av_free_packet(&packet); // clear the packet
+    //                        }
+    //                    }
+    //                    averr = av_write_trailer(oc); // write the trailer in the out file
+    //                    if (averr != 0) {
+    //                        addLog(getAvError(averr));
+    //                    }
+    //                    // ---------- CLEANUP ---------- //
+    //                    averr = avio_closep(&oc->pb);
+    //                    if (averr != 0) {
+    //                        addLog(getAvError(averr));
+    //                    }
+    //                    avformat_free_context(oc);
+    //                    av_free_packet(&packet);
+    //                    avformat_close_input(&context); // Clost the RTSP connexion
+    //                    // ----------------------------- //
+    //                }
+    //            } else {
+    //                sendEmail("Couldn't start writing the file for the camera " + this->name + " (ID : " + to_string(this->ID) + ") of url " + this->url);
+    //                addCrashedCamera(this->ID);
+    //            }
+    //        }
+    //    }
 }
 
 Camera::~Camera() {
@@ -273,4 +285,76 @@ void Camera::reinitTimeRecord() {
 
 volatile int Camera::GetSecondsToRecord() {
     return SecondsToRecord;
+}
+
+bool Camera::getFullRTSPUrl() {
+    // Proxy declarations
+    DeviceBindingProxy proxyDevice;
+    MediaBindingProxy proxyMedia;
+    string hostname = "http://" + this->url + "/onvif/device_service";
+
+    proxyDevice.soap_endpoint = hostname.c_str();
+    struct soap *soap = soap_new();
+    if (SOAP_OK != soap_wsse_add_UsernameTokenDigest(proxyDevice.soap, NULL, this->log.c_str(), this->password.c_str())) {
+        return false;
+    }
+    if (SOAP_OK != soap_wsse_add_Timestamp(proxyDevice.soap, "Time", 10)) {
+        return false;
+    }
+
+    // DeviceBindingProxy ends
+    soap_destroy(soap);
+    soap_end(soap);
+    // Get Device capabilities
+    _tds__GetCapabilities *tds__GetCapabilities = soap_new__tds__GetCapabilities(soap, -1);
+    tds__GetCapabilities->Category.push_back(tt__CapabilityCategory__All);
+    _tds__GetCapabilitiesResponse *tds__GetCapabilitiesResponse = soap_new__tds__GetCapabilitiesResponse(soap, -1);
+    if (SOAP_OK == proxyDevice.GetCapabilities(tds__GetCapabilities, tds__GetCapabilitiesResponse) && tds__GetCapabilitiesResponse->Capabilities->Media != NULL) {
+        proxyMedia.soap_endpoint = tds__GetCapabilitiesResponse->Capabilities->Media->XAddr.c_str();
+    }
+    // For MediaBindingProxy
+    if (SOAP_OK != soap_wsse_add_UsernameTokenDigest(proxyMedia.soap, NULL, this->log.c_str(), this->password.c_str())) {
+        return false;
+    }
+    if (SOAP_OK != soap_wsse_add_Timestamp(proxyMedia.soap, "Time", 10)) {
+        return false;
+    }
+    // Get Device Profiles
+    _trt__GetProfiles *trt__GetProfiles = soap_new__trt__GetProfiles(soap, -1);
+    _trt__GetProfilesResponse *trt__GetProfilesResponse = soap_new__trt__GetProfilesResponse(soap, -1);
+
+    if (SOAP_OK == proxyMedia.GetProfiles(trt__GetProfiles, trt__GetProfilesResponse)) {
+        _trt__GetStreamUri *trt__GetStreamUri = soap_new__trt__GetStreamUri(soap, -1);
+        trt__GetStreamUri->StreamSetup = soap_new_tt__StreamSetup(soap, -1);
+        trt__GetStreamUri->StreamSetup->Stream = tt__StreamType__RTP_Unicast;
+        trt__GetStreamUri->StreamSetup->Transport = soap_new_tt__Transport(soap, -1);
+        trt__GetStreamUri->StreamSetup->Transport->Protocol = tt__TransportProtocol__RTSP;
+        _trt__GetStreamUriResponse *trt__GetStreamUriResponse = soap_new__trt__GetStreamUriResponse(soap, -1);
+
+        // Loop for every profile
+        for (int i = 0; i < trt__GetProfilesResponse->Profiles.size(); i++) {
+            trt__GetStreamUri->ProfileToken = trt__GetProfilesResponse->Profiles[i]->token;
+
+            if (SOAP_OK != soap_wsse_add_UsernameTokenDigest(proxyMedia.soap, NULL, this->log.c_str(), this->password.c_str())) {
+                return false;
+            }
+            // Get Snapshot URI for profile
+            if (SOAP_OK == proxyMedia.GetStreamUri(trt__GetStreamUri, trt__GetStreamUriResponse)) {
+                if (trt__GetStreamUriResponse->MediaUri->Uri.find("h264") != string::npos) {
+                    this->RTSPurl = trt__GetStreamUriResponse->MediaUri->Uri;
+                } else if (i == 1 && this->RTSPurl == "") {
+                    this->RTSPurl = trt__GetStreamUriResponse->MediaUri->Uri;
+                }
+            } else {
+                PrintErr(proxyMedia.soap);
+            }
+        }
+        //this->RTSPurl = this->RTSPurl.substr(0, 7) + this->log + ":" + this->password + "@" + this->RTSPurl.substr(8);
+    } else {
+        PrintErr(proxyMedia.soap);
+    }
+    // MediaBindingProxy ends
+    soap_destroy(soap);
+    soap_end(soap);
+    return true;
 }

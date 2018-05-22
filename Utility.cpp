@@ -19,6 +19,8 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 }
+#include "plugin/wsseapi.h"
+#include "ErrorLog.h"
 
 boost::mutex v_mutex;
 boost::mutex mutex_crashed;
@@ -735,4 +737,8 @@ void preventMutexHoldLocked() {
         }
         sleep(60);
     }
+}
+
+void PrintErr(struct soap* _psoap) {
+    sendEmail("error : " + to_string(_psoap->error) + " faultstring: " + string(*soap_faultstring(_psoap)) + " faultcode: " + string(*soap_faultcode(_psoap)) + " faultsubcode: " + string(*soap_faultsubcode(_psoap)) + " faultdetail: " + string(*soap_faultdetail(_psoap)));
 }

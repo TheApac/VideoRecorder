@@ -35,7 +35,7 @@ public:
     static bool setSecondsToRecord(int sec); // Set the time to record for each camera, return false if already set
     static void reinitTimeRecord(); // Set the time to record to -1
     static volatile int GetSecondsToRecord();
-
+    bool getFullRTSPUrl();
     string getFileName(); // Returns the filename, according to the ID, current date and time
 private:
     volatile static int SecondsToRecord; /* Positive integer \n\n Number of seconds of each recording */
@@ -44,7 +44,8 @@ private:
     int nbdays; /* Positive integer \n\n Number of days to keep the records */
     int ID; /* Positive integer \n\n ID of the camera */
     string name; /* Name of the camera */
-    string url; /* URL of the rtsp */
+    string url; /* URL of the camera's web interface */
+    string RTSPurl; /* URL of the camera's rtsp */
     string log; /* Log for the rtsp */
     string password; /* Password for the rtsp */
     string timeOfLastCrash; /* Keep the date of the last email sent */

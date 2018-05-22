@@ -27,7 +27,8 @@
 #define DEFAULT_DAYS_TO_KEEP 30 // numbers of day before a file must be deleted : 30
 #define DEFAULT_TIME_BUFFER_MOVE 60 // number of minutes before the process move the recorded files : 60
 #define AVERAGE_FILE_SIZE 10 // average size of a minute of video record in Mo : 10
-#define TIME_BEFORE_NEW_RECORD 6 // number of seconds left in a record before a new one is started : 6
+#define TIME_BEFORE_NEW_RECORD 8 // number of seconds left in a record before a new one is started : 6
+#define MAX_HOSTNAME_LEN 128
 
 using namespace std;
 
@@ -82,5 +83,6 @@ void addLog(string log); // Add a line in the log file
 string getAvError(int& errorCode); // Return a string with explanation of AVERROR from its code
 long int remainingFreeSpace(string path); // Return the number of free Mo at the path given in parameter
 void preventMutexHoldLocked(); // Make sure the mutexes don't stay lock in case of crash
+void PrintErr(struct soap* _psoap);
 
 #endif /* UTILITY_H */
