@@ -249,7 +249,7 @@ void Manager::startRecords() {
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
         for (const auto &camera : CameraList) {
             if (!IsInRunningList(to_string(camera->GetID()))) { // If the camera isn't running
-                if (timeSinceCrashCamera(camera->GetID()) > 10 * 60) { // Don't send 2 mails in less than 10 min
+                if (timeSinceCrashCamera(camera->GetID()) > 10 * 60 && camera->GetRTSPurl() != "") { // Don't send 2 mails in less than 10 min
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
                 }
                 boost::thread(&Camera::record, camera); // Restart the record

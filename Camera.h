@@ -29,13 +29,14 @@ public:
     int GetNbdays() const;
     string GetPassword() const;
     string GetUrl() const;
+    string GetRTSPurl() const;
 
     void record();
 
     static bool setSecondsToRecord(int sec); // Set the time to record for each camera, return false if already set
     static void reinitTimeRecord(); // Set the time to record to -1
     static volatile int GetSecondsToRecord();
-    bool getFullRTSPUrl();
+    static bool getFullRTSPUrl(Camera* cam);
     string getFileName(); // Returns the filename, according to the ID, current date and time
 private:
     volatile static int SecondsToRecord; /* Positive integer \n\n Number of seconds of each recording */

@@ -73,5 +73,10 @@ public:
     InvalidNbMin(std::string const& msg); /* Exception to throw when one of the configuration parameter for minutes is not a positive integer */
 };
 
+class InvalidOnvifConf : public CustomException {
+public:
+    InvalidOnvifConf(std::string const& msg); /* Exception to throw when one the onvif configuration is erroneous */
+};
+
 #endif /* CUSTOMEXCEPTION_H */
 

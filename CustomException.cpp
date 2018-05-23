@@ -50,3 +50,6 @@ DuplicateID::DuplicateID(std::string const &msg) : CustomException("The ID : " +
 
 InvalidNbMin::InvalidNbMin(std::string const &msg) : CustomException("Invalid number of minutes : " + msg + " should be a positive integer") {
 }
+
+InvalidOnvifConf::InvalidOnvifConf(std::string const &msg) : CustomException("Invalid Onvif configuration for camera : " + msg) {
+}

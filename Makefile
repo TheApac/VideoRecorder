@@ -126,3 +126,9 @@ $(TARGETDIR_VideoRecorder):
 .KEEP_STATE:
 .KEEP_STATE_FILE:.make.state.GNU-amd64-Linux
 
+re: clean all
+
+fresh: clean clearScr all
+
+clearScr:
+	clear
