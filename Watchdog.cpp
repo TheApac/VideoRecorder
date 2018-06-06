@@ -17,10 +17,11 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <fstream>
+#include <iostream>
 #include <signal.h>
 
 Watchdog::Watchdog() {
-    deamonize();
+    //deamonize();
     sleep(60);
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
@@ -44,9 +45,15 @@ Watchdog::Watchdog() {
                         file.close();
                         remove(fileName.c_str());
                         setLocation("");
+                        std::ofstream outFile;
+                        outFile.open("/home/Alexandre/Documents/crashLog.txt", std::ios::app);
+                        outFile << "MANAGER CRASHED" << currentDate() << endl;
+                        outFile.close();
                         auto manager = make_shared<Manager>();
                         manager->startRecords();
                         exit(EXIT_SUCCESS);
+                    } else {
+                        sleep(120);
                     }
                 }
                 file.close();
@@ -65,6 +72,10 @@ Watchdog::Watchdog() {
                     lastMail = currentDate();
                     remove(fileName.c_str());
                     setLocation("");
+                    std::ofstream outFile;
+                    outFile.open("/home/Alexandre/Documents/crashLog.txt", std::ios::app);
+                    outFile << "MANAGER CRASHED" << currentDate() << endl;
+                    outFile.close();
                     auto manager = make_shared<Manager>();
                     manager->startRecords();
                     exit(EXIT_SUCCESS);

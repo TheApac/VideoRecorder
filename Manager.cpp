@@ -54,11 +54,12 @@ Manager::Manager() {
     string line;
     regex ChangeCam("^\\[CAMERA");
     try {
+        string parameterName = "", parameterValue = "";
         while (std::getline(file, line)) { // iterate through each line of the configuration file
             ++nbLinesRead; // used to display which line has a problem
             if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
-                string parameterName = line.substr(0, line.find_first_of("="));
-                string parameterValue = line.substr(line.find_first_of("=") + 1);
+                parameterName = line.substr(0, line.find_first_of("="));
+                parameterValue = line.substr(line.find_first_of("=") + 1);
                 if (parameterName == "ID") {
                     if (isOnlyNumeric(parameterValue)) { // check if the ID is a positive integer
                         if (ID == -1) { // if no ID is set for the current camera
@@ -227,6 +228,7 @@ void Manager::CameraOver(int &enregistrable) {
 }
 
 Manager::~Manager() {
+    //cout << "Destroy Manager : " << currentDate() << endl;
 }
 
 /* Start to record each cameras
@@ -236,16 +238,24 @@ void Manager::startRecords() {
     if (nbSecBetweenRecords == -1) {
         nbSecBetweenRecords = DEFAULT_TIME_BETWEEN_RECORDS;
     }
+    //cout << "Start update time" << endl;
     boost::thread(&Manager::updateTime, this);
+    //cout << "Start startMoveFromBuffer" << endl;
     boost::thread(startMoveFromBuffer, nbdays);
+    //cout << "Start runBufferDir" << endl;
     boost::thread(runBufferDir);
+    //cout << "Start startMvmtDetect" << endl;
     boost::thread(&Manager::startMvmtDetect, this);
+    //cout << "getListenPort" << endl;
+    getListenPort();
+    //cout << "Start every camera" << endl;
     for (const auto &camera : CameraList) {
         boost::thread(&Camera::record, camera); // Start the record in a new thread
         sleep(nbSecBetweenRecords); // wait between the start of each record
     }
     boost::thread(preventMutexHoldLocked);
     while (1) { // make sure every camera is still recording
+        //cout << "loop verif camera : " << currentDate() << endl;
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
         for (const auto &camera : CameraList) {
             if (!IsInRunningList(to_string(camera->GetID()))) { // If the camera isn't running
@@ -258,16 +268,19 @@ void Manager::startRecords() {
                 deleteNode(to_string(camera->GetID())); // Remove the camera from the list
             }
         }
+        //cout << "loop verif camera before sleep : " << currentDate() << endl;
         sleep(60); // Run every minute
     }
 }
 
 void Manager::updateTime() {
+    //cout << "Start updateTime : " << currentDate() << endl;
     struct passwd *pw = getpwuid(getuid());
     string file = string(pw->pw_dir) + "/.VideoRecorderFiles/.RunningVideoRecorder";
     while (1) { // Write the current time in the file every 30 seconds
         remove(file.c_str());
         ofstream runfile(file);
+        //cout << "updateTime : " << currentDate() << endl;
         runfile << currentDate() << endl;
         runfile.close();
         sleep(30); // Update date saved in file every 30 seconds
@@ -282,7 +295,7 @@ void Manager::startMvmtDetect() {
 }
 
 void Manager::detectMvmt() {
-    getListenPort();
+    //cout << "Start dectect movement : " << currentDate() << endl;
     int socket_desc, client_sock, c, read_size;
     struct sockaddr_in server, client;
     char client_message[2000]; // Char[] that saves the message received
@@ -359,6 +372,7 @@ void Manager::detectMvmt() {
     }
     close(socket_desc);
     m_ip.unlock(); // Allow to start a new bind
+    //cout << "End dectect movement : " << currentDate() << endl;
 }
 
 void Manager::getListenPort() {
@@ -379,20 +393,25 @@ void Manager::getListenPort() {
 
 /* Return the camera from its IP */
 shared_ptr<Camera> Manager::getCamByIp(string ip) {
+    //cout << "Start get cam by ip : " << currentDate() << endl;
     for (const auto &cam : CameraList) {
         if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) { //get IP by cuttin the port and following
+            //cout << "End get cam by ip (found) : " << currentDate() << endl;
             return cam; // return the found camera
         }
     }
+    //cout << "End get cam by ip (not found) : " << currentDate() << endl;
     return NULL; // Return NULL if no camera has that IP
 }
 
 /* Reboot thread that will move files from buffer to definitive directory if crashed */
 void Manager::runBufferDir() {
+    //cout << "Start runBufferDir : " << currentDate() << endl;
     if (bufferDirList.size() > 0) {
         int nbMin = bufferDirList.at(0).nbMin; // gets the number of minutes between move
         sleep(10);
         while (1) {
+            //cout << "Start runBufferDir loop : " << currentDate() << endl;
             if (secondsSinceDate(runningBufferMove) > nbMin * 3) { // wait for 3 loop before checking
                 boost::thread(startMoveFromBuffer, nbdays);
             }

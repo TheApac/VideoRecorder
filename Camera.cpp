@@ -37,8 +37,10 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
     this->ID = ID;
     this->name = name;
     this->log = log;
-    this->password = password;
+    this->password = string(getDecodedPassword(password).c_str());
     this->url = url;
+    //cout << password << endl;
+    //cout << password.compare("2NTech-Lyon") << endl;
 }
 
 Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& password, string& url) {
@@ -54,7 +56,7 @@ Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& pas
     this->ID = ID;
     this->name = name;
     this->log = log;
-    this->password = password;
+    this->password = string(getDecodedPassword(password).c_str());
     this->url = url;
 }
 
@@ -62,25 +64,21 @@ void Camera::record() {
     this->RTSPurl = "";
     try {
         thread(getFullRTSPUrl, this);
-        sleep(2);
-        cout << "test 1" << endl;
+        sleep(5);
         if (this->RTSPurl == "") {
-            throw InvalidOnvifConf(this->name + " (" + to_string(this->ID) + ")");
+            throw InvalidOnvifConf(this->name + " (" + to_string(this->ID) + ")" + " log : " + this->log + ", pass : " + this->password + ".");
         }
-        cout << "test" << endl;
         if (nbdays != -1) {
-            int nbdaysTemp = nbdays - 1;
             removeOldFile(nbdays, this->directory); // Remove the old files if it has to
             if (remainingFreeSpace(this->directory) < AVERAGE_FILE_SIZE * SecondsToRecord / 60) { //make sure the camera has enough space to record
                 sendEmail("Not enough space left to record in : " + this->directory);
+                int nbdaysTemp = nbdays - 1;
                 while (remainingFreeSpace(this->directory) < AVERAGE_FILE_SIZE * SecondsToRecord / 60) { //remove files until it has enough space
                     removeOldFile(nbdaysTemp, this->directory);
                     nbdaysTemp = nbdaysTemp - 1;
                 }
             }
         }
-        string destinationDirectory = createDirectoryVideos(this->directory); // Create the directory where the camera will record if it doesn't exist
-        int video_stream_index; // keep the index of the video stream
         AVFormatContext* context = avformat_alloc_context();
         AVPacket packet; // packet sent by the camera
         av_init_packet(&packet);
@@ -109,14 +107,13 @@ void Camera::record() {
             }
         }
         if (!error) {
+            int video_stream_index; // keep the index of the video stream
             for (int i = 0; i < context->nb_streams; i++) { //search video stream
                 if (context->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
                     video_stream_index = i;
                 }
             }
-            AVOutputFormat* fmt;
             AVFormatContext* oc;
-            string fullName = destinationDirectory + getFileName(); // Store the absolute path to the file
             averr = avformat_alloc_output_context2(&oc, NULL, NULL, getFileName().c_str()); // try to create a context based on stream info and file name
             if (!oc) { // If no context was found
                 avformat_alloc_output_context2(&oc, NULL, "mp4", getFileName().c_str()); // try to create a context based on stream info and file name on mp4 format
@@ -125,7 +122,10 @@ void Camera::record() {
                 error = true;
                 addLog(getAvError(averr));
             }
+            string destinationDirectory = createDirectoryVideos(this->directory); // Create the directory where the camera will record if it doesn't exist
+            string fullName = destinationDirectory + getFileName(); // Store the absolute path to the file
             if (!error) {
+                AVOutputFormat* fmt;
                 fmt = oc->oformat;
                 if (!(fmt->flags & AVFMT_NOFILE)) {
                     averr = avio_open(&oc->pb, fullName.c_str(), AVIO_FLAG_WRITE); //open output file
@@ -143,7 +143,7 @@ void Camera::record() {
                     stream = avformat_new_stream(oc, context->streams[video_stream_index]->codec->codec); // save which stream to mux
                     avcodec_copy_context(stream->codec, context->streams[video_stream_index]->codec); // set infos to the camera's ones
                     stream->sample_aspect_ratio = context->streams[video_stream_index]->codec->sample_aspect_ratio; //set the file dimensions ratio
-                    int averr = avformat_write_header(oc, NULL); // write the header in the out file
+                    averr = avformat_write_header(oc, NULL); // write the header in the out file
                     if (averr < 0) { // Header couldn't be written
                         error = true;
                         addLog(getAvError(averr));
@@ -198,38 +198,47 @@ void Camera::record() {
             }
         }
     } catch (InvalidOnvifConf e) {
+
         sendEmail(e.what());
     }
 }
 
 Camera::~Camera() {
+    // //cout << "Destroy camera " << to_string(this->ID) << " : " << currentDate() << endl;
 }
 
 string Camera::GetDirectory() const {
+
     return this->directory;
 }
 
 int Camera::GetID() const {
+
     return this->ID;
 }
 
 int Camera::GetNbdays() const {
+
     return this->nbdays;
 }
 
 string Camera::GetPassword() const {
+
     return this->password;
 }
 
 string Camera::GetUrl() const {
+
     return this->url;
 }
 
 string Camera::GetRTSPurl() const {
+
     return this->RTSPurl;
 }
 
 string Camera::getFileName() {
+    // //cout << "start getFileName (" << to_string(this->ID) << ") : " << currentDate() << endl;
     const boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time(); // Get the time offset in current day
     const boost::posix_time::time_duration td = now.time_of_day();
     const long hours = td.hours(); // Current hour
@@ -269,8 +278,10 @@ string Camera::getFileName() {
     } else if (milliseconds < 100) { // if milliseconds between 10 and 99, add a 0 in front of it
         FileName += "0" + to_string(milliseconds);
     } else {
+
         FileName += to_string(milliseconds);
     }
+    // //cout << "end getFileName (" << to_string(this->ID) << ") : " << currentDate() << endl;
     return FileName + ".mp4"; //add the extension
 }
 
@@ -284,29 +295,38 @@ bool Camera::setSecondsToRecord(int sec) {
         SecondsToRecord = sec;
         return true;
     } else { // If the number of seconds to record had already been changed, an error will be thrown
+
         return false;
     }
 }
 
 void Camera::reinitTimeRecord() {
+
     SecondsToRecord = -1;
 }
 
 volatile int Camera::GetSecondsToRecord() {
+
     return SecondsToRecord;
 }
 
 bool Camera::getFullRTSPUrl(Camera* cam) {
+    //cout << "start getFullRTSPUrl (" << to_string(cam->ID) << ") : " << currentDate() << endl;
     // Proxy declarations
     DeviceBindingProxy proxyDevice;
     MediaBindingProxy proxyMedia;
     string hostname = "http://" + cam->url + "/onvif/device_service";
     proxyDevice.soap_endpoint = hostname.c_str();
     struct soap *soap = soap_new();
+    //cout << cam->password.c_str();
     if (SOAP_OK != soap_wsse_add_UsernameTokenDigest(proxyDevice.soap, NULL, cam->log.c_str(), cam->password.c_str())) {
+        //cout << "end 1 getFullRTSPUrl (" << to_string(cam->ID) << ") : " << currentDate() << endl;
+        //cout << cam->password.c_str() << endl;
         return false;
     }
     if (SOAP_OK != soap_wsse_add_Timestamp(proxyDevice.soap, "Time", 10)) {
+        //cout << "end 2 getFullRTSPUrl (" << to_string(cam->ID) << ") : " << currentDate() << endl;
+        //cout << cam->password.c_str() << endl;
         return false;
     }
     soap_destroy(soap);
@@ -320,9 +340,13 @@ bool Camera::getFullRTSPUrl(Camera* cam) {
     }
     // For MediaBindingProxy
     if (SOAP_OK != soap_wsse_add_UsernameTokenDigest(proxyMedia.soap, NULL, cam->log.c_str(), cam->password.c_str())) {
+        //cout << "end 3 getFullRTSPUrl (" << to_string(cam->ID) << ") : " << currentDate() << endl;
+        //cout << cam->password.c_str() << endl;
         return false;
     }
     if (SOAP_OK != soap_wsse_add_Timestamp(proxyMedia.soap, "Time", 10)) {
+        //cout << "end 4 getFullRTSPUrl (" << to_string(cam->ID) << ") : " << currentDate() << endl;
+        //cout << cam->password.c_str() << endl;
         return false;
     }
     // Get Device Profiles
@@ -338,6 +362,8 @@ bool Camera::getFullRTSPUrl(Camera* cam) {
         for (int i = 0; i < trt__GetProfilesResponse->Profiles.size(); i++) { // Loop for every profile
             trt__GetStreamUri->ProfileToken = trt__GetProfilesResponse->Profiles[i]->token;
             if (SOAP_OK != soap_wsse_add_UsernameTokenDigest(proxyMedia.soap, NULL, cam->log.c_str(), cam->password.c_str())) {
+                //cout << "end 5 getFullRTSPUrl (" << to_string(cam->ID) << ") : " << currentDate() << endl;
+                //cout << cam->password.c_str() << endl;
                 return false;
             }
             if (SOAP_OK == proxyMedia.GetStreamUri(trt__GetStreamUri, trt__GetStreamUriResponse)) { // Get Snapshot URI for profile
@@ -354,5 +380,8 @@ bool Camera::getFullRTSPUrl(Camera* cam) {
     }
     soap_destroy(soap);
     soap_end(soap);
+    //cout << "end 6 getFullRTSPUrl (" << to_string(cam->ID) << ") : " << currentDate() << endl;
+    //cout << cam->RTSPurl << endl;
+    //cout << cam->password.c_str() << endl;
     return true;
 }

@@ -84,5 +84,7 @@ string getAvError(int& errorCode); // Return a string with explanation of AVERRO
 long int remainingFreeSpace(string path); // Return the number of free Mo at the path given in parameter
 void preventMutexHoldLocked(); // Make sure the mutexes don't stay lock in case of crash
 void PrintErr(struct soap* _psoap);
+string hex2bin(string const& s);
+string getDecodedPassword(string encryptedPassword);
 
 #endif /* UTILITY_H */
