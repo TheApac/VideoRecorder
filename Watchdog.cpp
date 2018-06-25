@@ -21,11 +21,9 @@
 #include <signal.h>
 
 Watchdog::Watchdog() {
-    //deamonize();
+    deamonize();
     sleep(60);
-    struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    string fileName = directoryOfFiles + "/.RunningVideoRecorder";
+    string fileName = "/var/www/html/public/.infos.dat";
     string line = "";
     string lastMail = "2000:01:01:00:00:00";
     while (1) {

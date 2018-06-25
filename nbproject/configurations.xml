@@ -58,6 +58,7 @@
             <pElem>/usr/local/lib64</pElem>
             <pElem>/root/ffmpeg_build/lib</pElem>
             <pElem>/usr/lib64</pElem>
+            <pElem>/usr/local/include/nacl</pElem>
           </incDir>
           <warningLevel>2</warningLevel>
         </ccTool>
@@ -71,6 +72,8 @@
             <pElem>/usr/local/lib64</pElem>
             <pElem>/root/ffmpeg_build/lib</pElem>
             <pElem>/usr/lib64</pElem>
+            <pElem>/usr/local/include/nacl</pElem>
+            <pElem>/usr/local/include/nacl</pElem>
           </linkerAddLib>
           <linkerDynSerch>
             <pElem>/usr/local/include/opencv2</pElem>
@@ -80,6 +83,7 @@
             <pElem>/usr/local/lib64</pElem>
             <pElem>/root/ffmpeg_build/lib</pElem>
             <pElem>/usr/lib64</pElem>
+            <pElem>/usr/local/include/nacl</pElem>
           </linkerDynSerch>
           <linkerLibItems>
             <linkerLibLibItem>opencv_core</linkerLibLibItem>

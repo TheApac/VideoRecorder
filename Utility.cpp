@@ -16,15 +16,16 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
-#include <sodium.h>
 #include <cassert>
+#include <crypto_secretbox.h>
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <sodium/crypto_box.h>
 }
 #include "plugin/wsseapi.h"
 #include "ErrorLog.h"
+#include <sstream>
+#include <utility>
 
 boost::mutex v_mutex;
 boost::mutex mutex_crashed;
@@ -430,15 +431,15 @@ bool fileExists(const string& name) {
 string currentDate() {
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
-    string date = to_string(now->tm_year + 1900) + ":";
+    string date = to_string(now->tm_year + 1900) + "-";
     if (now->tm_mon + 1 < 10) {
         date += "0";
     }
-    date += to_string(now->tm_mon + 1) + ":";
+    date += to_string(now->tm_mon + 1) + "-";
     if (now->tm_mday < 10) {
         date += "0";
     }
-    date += to_string(now->tm_mday) + ":";
+    date += to_string(now->tm_mday) + " ";
     if (now->tm_hour < 10) {
         date += "0";
     }
@@ -530,7 +531,6 @@ bool isRunningManager() {
 }
 
 void removeOldCrashedCameras() {
-    //cout << "start removeOldCrashedCameras : " << currentDate() << endl;
     mutex_crashed.lock();
     lastLockCrash = currentDate();
     vector<string> CrashedCameraListCopy = CrashedCameraList;
@@ -544,30 +544,42 @@ void removeOldCrashedCameras() {
     }
     CrashedCameraList = CrashedCameraListCopy;
     mutex_crashed.unlock();
-    //cout << "end removeOldCrashedCameras : " << currentDate() << endl;
+}
+
+void removeCrashedCameraByID(int ID) {
+    mutex_crashed.lock();
+    vector<string> CrashedCameraListCopy = CrashedCameraList;
+    int index = 0; //keep the position of the camera
+    for (string cameraInfo : CrashedCameraListCopy) {
+        if (atoi(cameraInfo.substr(0, cameraInfo.find_first_of('-')).c_str()) == ID) { // Erease if the camera crashed more than 10 minutes ago
+            CrashedCameraListCopy.erase(CrashedCameraListCopy.begin() + index);
+        } else { //Stay at the index if a delete was made
+            ++index;
+        }
+    }
+    CrashedCameraList = CrashedCameraListCopy;
+    mutex_crashed.unlock();
 }
 
 bool didCameraCrash(int ID) {
-    //cout << "start didCameraCrash : " << currentDate() << endl;
     mutex_crashed.lock();
     lastLockCrash = currentDate();
     int index = 0;
     while (index != CrashedCameraList.size()) {
         if (CrashedCameraList[index].substr(0, CrashedCameraList[index].find_first_of('-')) == to_string(ID)) {
             mutex_crashed.unlock();
-            //cout << "end didCameraCrash : " << currentDate() << endl;
             return true; // If the camera is found, exit the function
         }
         ++index;
     }
     mutex_crashed.unlock();
-    //cout << "end didCameraCrash : " << currentDate() << endl;
     return false;
 }
 
 int timeSinceCrashCamera(int IDCam) {
     //cout << "start timeSinceCrashCamera : " << currentDate() << endl;
     if (!didCameraCrash(IDCam)) { // If it never crashed, return a large number
+        cout << "Add 6" << endl;
         addCrashedCamera(IDCam);
         //cout << "end timeSinceCrashCamera : " << currentDate() << endl;
         return 9999999;
@@ -587,14 +599,13 @@ int timeSinceCrashCamera(int IDCam) {
 }
 
 void addCrashedCamera(int ID) {
-    //cout << "start addCrashedCamera : " << currentDate() << endl;
+    cout << "The camera " << to_string(ID) << " just crashed at " << currentDate() << endl;
     if (!didCameraCrash(ID)) {
         mutex_crashed.lock();
         lastLockCrash = currentDate();
         CrashedCameraList.push_back(to_string(ID) + "-" + currentDate());
         mutex_crashed.unlock();
     }
-    //cout << "end addCrashedCamera : " << currentDate() << endl;
 }
 
 void startMoveFromBuffer(int nbdays) {
@@ -805,26 +816,36 @@ void PrintErr(struct soap* _psoap) {
 }
 
 string hex2bin(std::string const& s) {
-    assert(s.length() % 2 == 0);
-    string sOut;
-    sOut.reserve(s.length() / 2);
-    string extract;
-    for (string::const_iterator pos = s.begin(); pos < s.end(); pos += 2) {
-        extract.assign(pos, pos + 2);
-        sOut.push_back(stoi(extract, nullptr, 16));
+    try {
+        string sOut;
+        sOut.reserve(s.length() / 2);
+        string extract;
+        for (string::const_iterator pos = s.begin(); pos < s.end(); pos += 2) {
+            extract.assign(pos, pos + 2);
+            sOut.push_back(stoi(extract, nullptr, 16));
+        }
+        return sOut;
+    } catch (std::exception const &e) {
+        throw e;
     }
-    return sOut;
 }
 
-string getDecodedPassword(string encryptedPassword) {
-    if (sodium_init() < 0) {
+string getDecodedPassword(string& encryptedPassword) {
+    try {
+        return crypto_secretbox_open(hex2bin(encryptedPassword), hex2bin(NONCE_SECRETBOX), hex2bin(KEY_SECRETBOX));
+    } catch (const char *e) {
+        return "";
+    } catch (std::exception const &e) {
         return "";
     }
-    string nonce = "d37c1d095ff0b0d03419feaed81a3b12b1f4f61fc4a56514";
-    string key = "ec25604b2e6de18ca855e9c24ba72cf120d6d680c117d659fb67029d172cbec3";
-    unsigned char * decrypted;
-    const unsigned char * noCrash = reinterpret_cast<const unsigned char *> (hex2bin(encryptedPassword).c_str());
-    if (crypto_secretbox_open_easy(decrypted, reinterpret_cast<const unsigned char *> (hex2bin(encryptedPassword).c_str()), hex2bin(encryptedPassword).length(), reinterpret_cast<const unsigned char *> (hex2bin(nonce).c_str()), reinterpret_cast<const unsigned char *> (hex2bin(key).c_str()))) {
+}
+
+vector<string> explode(string const& s) {
+    vector<std::string> result;
+    istringstream iss(s);
+    char delim = '/';
+    for (string token; getline(iss, token, delim);) {
+        result.push_back(std::move(token));
     }
-    return string(reinterpret_cast<const char *> (decrypted));
+    return result;
 }

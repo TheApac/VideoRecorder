@@ -53,3 +53,6 @@ InvalidNbMin::InvalidNbMin(std::string const &msg) : CustomException("Invalid nu
 
 InvalidOnvifConf::InvalidOnvifConf(std::string const &msg) : CustomException("Invalid Onvif configuration for camera : " + msg) {
 }
+
+EmptyPassword::EmptyPassword(std::string const &msg) : CustomException("Empty password for camera : " + msg + ", the encrypted password given couldn't be decrypted") {
+}

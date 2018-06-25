@@ -24,11 +24,14 @@
 
 #define DEFAULT_TIME_BETWEEN_RECORDS 30 // seconds to wait for each camera after the previous one : 30
 #define DEFAULT_TIME_RECORDS 900 // seconds to record by default : 900 (15min)
+#define DEFAULT_TIME_BETWEEN_MAILS 300 // seconds tbetween 2 mails being sent : 600 (10min)
 #define DEFAULT_DAYS_TO_KEEP 30 // numbers of day before a file must be deleted : 30
 #define DEFAULT_TIME_BUFFER_MOVE 60 // number of minutes before the process move the recorded files : 60
 #define AVERAGE_FILE_SIZE 10 // average size of a minute of video record in Mo : 10
 #define TIME_BEFORE_NEW_RECORD 8 // number of seconds left in a record before a new one is started : 6
 #define MAX_HOSTNAME_LEN 128
+#define NONCE_SECRETBOX "d37c1d095ff0b0d03419feaed81a3b12b1f4f61fc4a56514"
+#define KEY_SECRETBOX "ec25604b2e6de18ca855e9c24ba72cf120d6d680c117d659fb67029d172cbec3"
 
 using namespace std;
 
@@ -75,6 +78,7 @@ bool didCameraCrash(int ID); // Check if the camera of ID given in parameter cra
 void removeOldCrashedCameras(); // Remove from the crashed camera list, the ones that crashed more than 10min ago
 int timeSinceCrashCamera(int IDCam); // Return the number of seconds since the camera of ID IDCam crashed
 void addCrashedCamera(int ID); // Add a camera to the list, with the time it crashed
+void removeCrashedCameraByID(int ID);
 void moveFromBufferMemory(string &defDir, string tempDir, int IDCam); // Move every file saved by camera IDCam from tempDir to defDir
 int secondsSinceRecord(string fileName); // Return the number of seconds since the file was recorded
 int getSizeListBuffDir(); // Return the size of the list that keeps the bufferDir structs
@@ -85,6 +89,7 @@ long int remainingFreeSpace(string path); // Return the number of free Mo at the
 void preventMutexHoldLocked(); // Make sure the mutexes don't stay lock in case of crash
 void PrintErr(struct soap* _psoap);
 string hex2bin(string const& s);
-string getDecodedPassword(string encryptedPassword);
+string getDecodedPassword(string& encryptedPassword);
+vector<string> explode(string const& s);
 
 #endif /* UTILITY_H */

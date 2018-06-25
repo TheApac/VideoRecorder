@@ -78,5 +78,10 @@ public:
     InvalidOnvifConf(std::string const& msg); /* Exception to throw when one the onvif configuration is erroneous */
 };
 
+class EmptyPassword : public CustomException {
+public:
+    EmptyPassword(std::string const& msg); /* Exception to throw when the encrypted password was erroneous */
+};
+
 #endif /* CUSTOMEXCEPTION_H */
 

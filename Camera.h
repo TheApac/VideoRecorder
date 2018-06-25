@@ -31,6 +31,8 @@ public:
     string GetUrl() const;
     string GetRTSPurl() const;
 
+    void SetRTSPurl(string RTSPurl);
+
     void record();
 
     static bool setSecondsToRecord(int sec); // Set the time to record for each camera, return false if already set
@@ -38,6 +40,8 @@ public:
     static volatile int GetSecondsToRecord();
     static bool getFullRTSPUrl(Camera* cam);
     string getFileName(); // Returns the filename, according to the ID, current date and time
+    void startThreadRTSPUrl();
+
 private:
     volatile static int SecondsToRecord; /* Positive integer \n\n Number of seconds of each recording */
     string directory; /* Directory where records will be saved */

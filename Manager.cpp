@@ -82,17 +82,23 @@ Manager::Manager() {
                     } else { // two logs are defined for the same camera
                         throw DuplicateField("Log (" + log.substr(0, log.size() - 1) + ")");
                     }
-                } else if (parameterName == "Mdp") {
+                } else if (parameterName == "Mdps") {
                     if (password == "") { // if no password is set for the current camera
                         password = parameterValue.substr(0, parameterValue.length() - 1);
                     } else { // two passwords are defined for the same camera
-                        throw DuplicateField("Password (" + password.substr(0, log.size() - 1) + ")");
+                        throw DuplicateField("Password (" + password.substr(0, password.size() - 1) + ")");
                     }
-                } else if (parameterName == "URLCamera") {
-                    if (url == "") { // if no url is set for the current camera
-                        url = parameterValue.substr(0, parameterValue.length() - 1);
+                } else if (parameterName == "IP") {
+                    if (url.find(".") == string::npos) { // if no url is set for the current camera
+                        url = parameterValue.substr(0, parameterValue.length() - 1) + url;
                     } else { // two URLs are defined for the same camera
-                        throw DuplicateField("URL (" + url.substr(0, log.size() - 1) + ")");
+                        throw DuplicateField("IP (" + url.substr(0, url.size() - 1) + ")");
+                    }
+                } else if (parameterName == "PortHTTP") {
+                    if (url.find(":") == string::npos) {
+                        url = url + ":" + parameterValue.substr(0, parameterValue.length() - 1);
+                    } else {
+                        throw DuplicateField("PortHTTP (" + url.substr(0, url.size() - 1) + ")");
                     }
                 } else if (parameterName == "Enregistrable") {
                     enregistrable = atoi(parameterValue.c_str());
@@ -228,7 +234,6 @@ void Manager::CameraOver(int &enregistrable) {
 }
 
 Manager::~Manager() {
-    //cout << "Destroy Manager : " << currentDate() << endl;
 }
 
 /* Start to record each cameras
@@ -238,29 +243,34 @@ void Manager::startRecords() {
     if (nbSecBetweenRecords == -1) {
         nbSecBetweenRecords = DEFAULT_TIME_BETWEEN_RECORDS;
     }
-    //cout << "Start update time" << endl;
+    cout << "before start threads" << endl;
     boost::thread(&Manager::updateTime, this);
-    //cout << "Start startMoveFromBuffer" << endl;
     boost::thread(startMoveFromBuffer, nbdays);
-    //cout << "Start runBufferDir" << endl;
     boost::thread(runBufferDir);
-    //cout << "Start startMvmtDetect" << endl;
     boost::thread(&Manager::startMvmtDetect, this);
-    //cout << "getListenPort" << endl;
     getListenPort();
-    //cout << "Start every camera" << endl;
+    cout << "after start threads" << endl;
     for (const auto &camera : CameraList) {
-        boost::thread(&Camera::record, camera); // Start the record in a new thread
-        sleep(nbSecBetweenRecords); // wait between the start of each record
+        camera->startThreadRTSPUrl();
+        sleep(1);
+        if (camera->GetRTSPurl() != "") {
+            boost::thread(&Camera::record, camera); // Start the record in a new thread
+            sleep(nbSecBetweenRecords); // wait between the start of each record
+        }
     }
     boost::thread(preventMutexHoldLocked);
     while (1) { // make sure every camera is still recording
-        //cout << "loop verif camera : " << currentDate() << endl;
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
         for (const auto &camera : CameraList) {
             if (!IsInRunningList(to_string(camera->GetID()))) { // If the camera isn't running
+                if (!didCameraCrash(camera->GetID())) {
+                    addCrashedCamera(camera->GetID());
+                }
                 if (timeSinceCrashCamera(camera->GetID()) > 10 * 60 && camera->GetRTSPurl() != "") { // Don't send 2 mails in less than 10 min
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
+                } else if (camera->GetRTSPurl() == "") {
+                    camera->startThreadRTSPUrl();
+                    sleep(5);
                 }
                 boost::thread(&Camera::record, camera); // Restart the record
                 sleep(nbSecBetweenRecords); // wait so there isn't two records starting a the same time
@@ -268,22 +278,54 @@ void Manager::startRecords() {
                 deleteNode(to_string(camera->GetID())); // Remove the camera from the list
             }
         }
-        //cout << "loop verif camera before sleep : " << currentDate() << endl;
         sleep(60); // Run every minute
     }
 }
 
 void Manager::updateTime() {
-    //cout << "Start updateTime : " << currentDate() << endl;
-    struct passwd *pw = getpwuid(getuid());
-    string file = string(pw->pw_dir) + "/.VideoRecorderFiles/.RunningVideoRecorder";
+    string fileToRead = "/var/www/html/public/.infos.dat";
+    string fileToWrite = "/var/www/html/public/.infosTemp.dat";
+    ofstream initFile(fileToRead);
+    initFile << currentDate() << endl;
+    for (const auto &camera : CameraList) {
+        initFile << camera->GetID() << "/" << currentDate() << "/" << "OK" << endl;
+    }
+    initFile.close();
     while (1) { // Write the current time in the file every 30 seconds
-        remove(file.c_str());
-        ofstream runfile(file);
-        //cout << "updateTime : " << currentDate() << endl;
-        runfile << currentDate() << endl;
-        runfile.close();
-        sleep(30); // Update date saved in file every 30 seconds
+        ofstream tempFile(fileToWrite);
+        ifstream inFile(fileToRead);
+        string line;
+        tempFile << currentDate() << endl;
+        getline(inFile, line);
+        while (std::getline(inFile, line)) {
+            vector<string> lineExploded = explode(line);
+            tempFile << lineExploded.at(0) << "/";
+            for (const auto &camera : CameraList) {
+                if (camera->GetID() == atoi(lineExploded.at(0).c_str())) {
+                    if (didCameraCrash(camera->GetID())) {
+                        if (lineExploded.at(2) == "Crash") {
+                            tempFile << lineExploded.at(1) << "/";
+                        } else {
+                            tempFile << currentDate() << "/";
+                        }
+                        tempFile << "Crash" << endl;
+                    } else {
+                        if (lineExploded.at(2) == "OK") {
+                            tempFile << lineExploded.at(1) << "/";
+                        } else {
+                            tempFile << currentDate() << "/";
+                        }
+                        tempFile << "OK" << endl;
+                    }
+                    break;
+                }
+            }
+        }
+        inFile.close();
+        tempFile.close();
+        remove(fileToRead.c_str());
+        rename(fileToWrite.c_str(), fileToRead.c_str());
+        sleep(27); // Update date saved in file every 30 seconds
     }
 }
 
@@ -295,7 +337,6 @@ void Manager::startMvmtDetect() {
 }
 
 void Manager::detectMvmt() {
-    //cout << "Start dectect movement : " << currentDate() << endl;
     int socket_desc, client_sock, c, read_size;
     struct sockaddr_in server, client;
     char client_message[2000]; // Char[] that saves the message received
@@ -372,7 +413,6 @@ void Manager::detectMvmt() {
     }
     close(socket_desc);
     m_ip.unlock(); // Allow to start a new bind
-    //cout << "End dectect movement : " << currentDate() << endl;
 }
 
 void Manager::getListenPort() {
@@ -395,23 +435,22 @@ void Manager::getListenPort() {
 shared_ptr<Camera> Manager::getCamByIp(string ip) {
     //cout << "Start get cam by ip : " << currentDate() << endl;
     for (const auto &cam : CameraList) {
-        if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) { //get IP by cuttin the port and following
-            //cout << "End get cam by ip (found) : " << currentDate() << endl;
-            return cam; // return the found camera
+        if (cam->GetUrl().find(":") != string::npos) {
+            if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) { //get IP by cuttin the port and following
+                //cout << "End get cam by ip (found) : " << currentDate() << endl;
+                return cam; // return the found camera
+            }
         }
     }
-    //cout << "End get cam by ip (not found) : " << currentDate() << endl;
     return NULL; // Return NULL if no camera has that IP
 }
 
 /* Reboot thread that will move files from buffer to definitive directory if crashed */
 void Manager::runBufferDir() {
-    //cout << "Start runBufferDir : " << currentDate() << endl;
     if (bufferDirList.size() > 0) {
         int nbMin = bufferDirList.at(0).nbMin; // gets the number of minutes between move
         sleep(10);
         while (1) {
-            //cout << "Start runBufferDir loop : " << currentDate() << endl;
             if (secondsSinceDate(runningBufferMove) > nbMin * 3) { // wait for 3 loop before checking
                 boost::thread(startMoveFromBuffer, nbdays);
             }

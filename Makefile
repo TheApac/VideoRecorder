@@ -10,9 +10,9 @@
 
 #### Compiler and tool definitions shared by all build targets #####
 CCC = g++
-CXX = g++
-INCLUDE = -I./include -I. -I/usr/local/include -L/usr/local/lib64
-BASICOPTS = -g -w -std=c++11 $(INCLUDE) -Wno-deprecated-declarations -lboost_system -lboost_filesystem -pthread -fPIC -lssl -lcrypto -lboost_thread -lavdevice -lavutil -lavformat -lavcodec -lcurl -lsodium -static-libstdc++ -fno-use-cxa-atexit -fexceptions -DWITH_DOM  -DWITH_OPENSSL
+CXX = g++ -std=c++11
+INCLUDE = -I./include -I. -I/usr/local/include -I/usr/local/include/nacl -L/usr/local/lib64
+BASICOPTS = -g -w -Werror -Wall $(INCLUDE) -Wno-deprecated-declarations -lboost_system -lboost_filesystem -pthread -fPIC -lssl -lcrypto -lboost_thread -lavdevice -lavutil -lavformat -lavcodec -lcurl -lsodium -static-libstdc++ -fno-use-cxa-atexit -fexceptions -DWITH_DOM  -DWITH_OPENSSL
 CCFLAGS = $(BASICOPTS)
 CXXFLAGS = $(BASICOPTS) --param ggc-min-expand=20 --param ggc-min-heapsize=4096
 CCADMIN =
@@ -47,7 +47,7 @@ OBJS_VideoRecorder =  \
 	$(TARGETDIR_VideoRecorder)/Camera.o
 USERLIBS_VideoRecorder = $(SYSLIBS_VideoRecorder)
 DEPLIBS_VideoRecorder =
-LDLIBS_VideoRecorder = $(USERLIBS_VideoRecorder)
+LDLIBS_VideoRecorder = $(USERLIBS_VideoRecorder) libnacl.a
 
 
 # Link or archive
