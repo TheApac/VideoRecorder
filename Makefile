@@ -19,7 +19,7 @@ CCADMIN =
 
 
 # Define the target directories.
-TARGETDIR_VideoRecorder=GNU-amd64-Linux
+TARGETDIR_VideoRecorder=CompiledFiles
 
 
 all: $(TARGETDIR_VideoRecorder)/VideoRecorder

@@ -73,6 +73,7 @@ bool fileExists(const string & name); // check if the file at the path "name" ex
 string currentDate(); // return the current date at the format "YYYY:MM:DD:HH::mm::ss"
 int secondsSinceDate(string dateToCompare); /* Calculate the number of seconds ellapsed since a date formated as "YYYY:MM:DD:HH:MM:SS" */
 bool setLocation(string location); /* Saves the geo location of the manager for the emails */
+string getLocation();
 bool isRunningManager(); /* Check if there is not already a manager running */
 bool didCameraCrash(int ID); // Check if the camera of ID given in parameter crashed less than 10minutes ago
 void removeOldCrashedCameras(); // Remove from the crashed camera list, the ones that crashed more than 10min ago

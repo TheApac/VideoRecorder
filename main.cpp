@@ -21,9 +21,7 @@
 using namespace std;
 
 int main() {
-    struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    string toRemove = directoryOfFiles + "/.RunningVideoRecorder";
+    string toRemove = "/var/www/html/public/.infos.dat";
     remove(toRemove.c_str());
     int error = configureSMTP();
     if (error == EXIT_FAILURE) {

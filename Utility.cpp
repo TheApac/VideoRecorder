@@ -439,7 +439,7 @@ string currentDate() {
     if (now->tm_mday < 10) {
         date += "0";
     }
-    date += to_string(now->tm_mday) + " ";
+    date += to_string(now->tm_mday) + "T";
     if (now->tm_hour < 10) {
         date += "0";
     }
@@ -462,6 +462,10 @@ bool setLocation(string location) {
         return true;
     }
     return false;
+}
+
+string getLocation() {
+    return SiteLocation;
 }
 
 void addRunningCamera(string ID) {
@@ -522,9 +526,7 @@ void deleteNode(string valueToDelete) {
 
 /* Check if there is not already a manager running */
 bool isRunningManager() {
-    struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    if (fileExists(directoryOfFiles + "/.RunningVideoRecorder")) {
+    if (fileExists("/var/www/html/public/.infos.dat")) {
         return true;
     }
     return false;
@@ -577,11 +579,10 @@ bool didCameraCrash(int ID) {
 }
 
 int timeSinceCrashCamera(int IDCam) {
-    //cout << "start timeSinceCrashCamera : " << currentDate() << endl;
     if (!didCameraCrash(IDCam)) { // If it never crashed, return a large number
         cout << "Add 6" << endl;
         addCrashedCamera(IDCam);
-        //cout << "end timeSinceCrashCamera : " << currentDate() << endl;
+        cout << "end timeSinceCrashCamera : " << currentDate() << endl;
         return 9999999;
     }
     mutex_crashed.lock();
@@ -591,7 +592,6 @@ int timeSinceCrashCamera(int IDCam) {
         if (CrashedCameraList.at(index).substr(0, CrashedCameraList.at(index).find_first_of('-')) == to_string(IDCam)) { // if good camera
             int toReturn = secondsSinceDate(CrashedCameraList.at(index).substr(CrashedCameraList.at(index).find_first_of('-') + 1)); // return the number of second since crash
             mutex_crashed.unlock();
-            //cout << "end timeSinceCrashCamera : " << currentDate() << endl;
             return toReturn;
         }
         ++index;

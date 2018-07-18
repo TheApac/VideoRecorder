@@ -41,8 +41,9 @@ Manager::Manager() {
     remove(runfileName.c_str());
     ofstream runfile(runfileName);
     runfile << currentDate() << endl;
-    name = "", log = "", password = "", url = "", path = "", tempPath = "";
+    name = "", log = "", password = "", url = "", path = "", tempPath = "", repertoireDefaut = "";
     ID = -1, nbdays = -1, nbMinBetweenMoveBuffer = -1;
+
     int enregistrable = -1;
     bool firstCamera = true; // Prevent a bug for the start of the first camera
     int nbLinesRead = 0; // Keep the number of the current line to send it as detail if an error is encountered
@@ -107,6 +108,9 @@ Manager::Manager() {
                     }
                 } else if (parameterName == "DossierEnreg") {
                     if (path == "") {
+                        if (repertoireDefaut == "") {
+                            repertoireDefaut = parameterValue.substr(0, parameterValue.length() - 1);
+                        }
                         path = parameterValue.substr(0, parameterValue.length() - 1);
                     } else { //only one saving directory can be specified
                         throw DuplicateField("Path");
@@ -141,7 +145,7 @@ Manager::Manager() {
                     } else {
                         throw InvalidNbMin(parameterValue); // Throw an error if the number is invalid
                     }
-                } else if (parameterName == "TempDirectory") {
+                } else if (parameterName == "DossierTampon") {
                     if (this->tempPath != "") { // Check if ther is not two buffer directory declared for one camera
                         throw DuplicateField("Buffer directory");
                     } else {
@@ -189,20 +193,26 @@ void Manager::CameraOver(int &enregistrable) {
                 throw DuplicateID(to_string(ID));
             }
         }
-        if (enregistrable == 1 && path != "") { // If all the fields are completed and the camera can be recorded
+        if (enregistrable == 1) { // If all the fields are completed and the camera can be recorded
             mutex_camlist.lock();
             if (tempPath != "") {
                 CameraList.push_back(make_shared<Camera>(tempPath, ID, name, log, password, url));
                 if (nbMinBetweenMoveBuffer == -1) {
                     nbMinBetweenMoveBuffer = DEFAULT_TIME_BUFFER_MOVE; // If there is no number of minute between each move from buffer memory, default (60) is applied
                 }
-                addBufferDir(nbMinBetweenMoveBuffer, path, tempPath, ID);
+                if (path == "") {
+                    addBufferDir(nbMinBetweenMoveBuffer, repertoireDefaut, tempPath, ID);
+                } else {
+                    addBufferDir(nbMinBetweenMoveBuffer, path, tempPath, ID);
+                }
             } else {
-                CameraList.push_back(make_shared<Camera>(path, nbdays, ID, name, log, password, url)); // Create a list of camera
+                if (path == "") {
+                    CameraList.push_back(make_shared<Camera>(repertoireDefaut, nbdays, ID, name, log, password, url)); // Create a list of camera
+                } else {
+                    CameraList.push_back(make_shared<Camera>(path, nbdays, ID, name, log, password, url)); // Create a list of camera
+                }
             }
             mutex_camlist.unlock();
-        } else if (enregistrable == 1 && path != "") {
-            throw UndefinedField("Path");
         }
         // Reset all fields
         ID = -1;
@@ -243,13 +253,11 @@ void Manager::startRecords() {
     if (nbSecBetweenRecords == -1) {
         nbSecBetweenRecords = DEFAULT_TIME_BETWEEN_RECORDS;
     }
-    cout << "before start threads" << endl;
     boost::thread(&Manager::updateTime, this);
     boost::thread(startMoveFromBuffer, nbdays);
     boost::thread(runBufferDir);
     boost::thread(&Manager::startMvmtDetect, this);
     getListenPort();
-    cout << "after start threads" << endl;
     for (const auto &camera : CameraList) {
         camera->startThreadRTSPUrl();
         sleep(1);
@@ -283,10 +291,11 @@ void Manager::startRecords() {
 }
 
 void Manager::updateTime() {
+    mkdir("/var/www/html/public/", S_IRWXU | S_IRWXG | S_IRWXO);
     string fileToRead = "/var/www/html/public/.infos.dat";
     string fileToWrite = "/var/www/html/public/.infosTemp.dat";
     ofstream initFile(fileToRead);
-    initFile << currentDate() << endl;
+    initFile << currentDate() << "/" << getLocation() << endl;
     for (const auto &camera : CameraList) {
         initFile << camera->GetID() << "/" << currentDate() << "/" << "OK" << endl;
     }
@@ -295,7 +304,7 @@ void Manager::updateTime() {
         ofstream tempFile(fileToWrite);
         ifstream inFile(fileToRead);
         string line;
-        tempFile << currentDate() << endl;
+        tempFile << currentDate() << "/" << getLocation() << endl;
         getline(inFile, line);
         while (std::getline(inFile, line)) {
             vector<string> lineExploded = explode(line);
@@ -433,7 +442,6 @@ void Manager::getListenPort() {
 
 /* Return the camera from its IP */
 shared_ptr<Camera> Manager::getCamByIp(string ip) {
-    //cout << "Start get cam by ip : " << currentDate() << endl;
     for (const auto &cam : CameraList) {
         if (cam->GetUrl().find(":") != string::npos) {
             if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) { //get IP by cuttin the port and following

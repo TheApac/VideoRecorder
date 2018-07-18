@@ -38,6 +38,7 @@ private:
     string log;
     string password;
     string url;
+    string repertoireDefaut;
     /* ------------------------------------------------------- */
     int listenPort; // Port where movement notification are sent
     int nbMinBetweenMoveBuffer;
