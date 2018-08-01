@@ -36,9 +36,10 @@ Camera::Camera(string& path, int& nbdays, int& ID, string& name, string& log, st
     this->ID = ID;
     this->name = name;
     this->log = log;
-    this->password = getDecodedPassword(password);
+    this->password = string(getDecodedPassword(password).c_str());
     this->url = url;
     this->timeOfLastCrash = "2000-01-01-00-00-00";
+    this->canRecord = true;
 }
 
 Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& password, string& url) {
@@ -57,16 +58,20 @@ Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& pas
     this->password = string(getDecodedPassword(password).c_str());
     this->url = url;
     this->timeOfLastCrash = "2000-01-01-00-00-00";
+    this->canRecord = true;
 }
 
 void Camera::record() {
     try {
+        cout << "start : " << endl;
         if (this->password == "") {
+            cout << "erreur decodage" << endl;
             throw EmptyPassword(this->name + " (" + to_string(this->ID) + ")");
         }
-        thread(getFullRTSPUrl, this);
+        this->startThreadRTSPUrl();
         sleep(5);
         if (this->RTSPurl == "") {
+            cout << "erreur rtsp" << endl;
             throw InvalidOnvifConf(this->name + " (" + to_string(this->ID) + ")" + " log : " + this->log + ", pass : " + this->password + ".");
         } else {
             if (nbdays != -1) {
@@ -80,6 +85,7 @@ void Camera::record() {
                     }
                 }
             }
+            cout << "start avformat" << endl;
             AVFormatContext* context = avformat_alloc_context();
             AVPacket packet; // packet sent by the camera
             av_init_packet(&packet);
@@ -97,6 +103,7 @@ void Camera::record() {
             } else {
                 addLog(getAvError(averr));
             }
+            cout << "no erreur 1" << endl;
             if (!error) {
                 averr = avformat_find_stream_info(context, NULL);
                 if (averr < 0) { // retrieve informations of the stream
@@ -107,6 +114,7 @@ void Camera::record() {
                     error = true;
                 }
             }
+            cout << "no erreur 2" << endl;
             if (!error) {
                 int video_stream_index; // keep the index of the video stream
                 for (int i = 0; i < context->nb_streams; i++) { //search video stream
@@ -139,24 +147,31 @@ void Camera::record() {
                             }
                         }
                     }
+                    cout << "no erreur 3" << endl;
                     if (!error) {
                         AVStream* stream = NULL;
                         stream = avformat_new_stream(oc, context->streams[video_stream_index]->codec->codec); // save which stream to mux
                         avcodec_copy_context(stream->codec, context->streams[video_stream_index]->codec); // set infos to the camera's ones
                         stream->sample_aspect_ratio = context->streams[video_stream_index]->codec->sample_aspect_ratio; //set the file dimensions ratio
+                        //                        stream->r_frame_rate = context->streams[video_stream_index]->r_frame_rate;
+                        //                        stream->avg_frame_rate = stream->r_frame_rate;
+                        //                        stream->time_base = av_inv_q(stream->r_frame_rate);
+                        //                        stream->codec->time_base = stream->time_base;
                         averr = avformat_write_header(oc, NULL); // write the header in the out file
                         if (averr < 0) { // Header couldn't be written
                             error = true;
                             addLog(getAvError(averr));
                         }
                     }
+                    cout << "no erreur 4" << endl;
                     if (!error) {
                         bool recordNext = false; // start only one other recording
                         time_t t = time(0);
                         long int secondsToStop = time(&t) + SecondsToRecord; // save when to stop recording this video
                         int lostframe = 0; // Saves the number of frames lost
                         removeCrashedCameraByID(this->GetID());
-                        while (time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
+                        cout << "start record" << endl;
+                        while (canStillRecord() && time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
                             if (!IsInRunningList(to_string(this->ID))) { // If the camera isn't in the list of running cameras
                                 thread(addRunningCamera, to_string(this->ID)); // Add itself to it
                             }
@@ -173,7 +188,7 @@ void Camera::record() {
                                 if (packet.stream_index == video_stream_index) { //check if the packet is a video
                                     av_write_frame(oc, &packet); // write the frame in the out file
                                 }
-                                if (!recordNext && time(&t) + TIME_BEFORE_NEW_RECORD == secondsToStop) { // If no other record has been started and it's time to start one
+                                if (!recordNext && time(&t) + TIME_BEFORE_NEW_RECORD == secondsToStop && canStillRecord()) { // If no other record has been started and it's time to start one
                                     thread(&Camera::record, this); // Start a new record for the same camera in a new thread
                                     recordNext = true; // Store the fact that an other record has been started
                                 }
@@ -203,20 +218,17 @@ void Camera::record() {
     } catch (InvalidOnvifConf e) {
         if (secondsSinceDate(this->timeOfLastCrash) > DEFAULT_TIME_BETWEEN_MAILS) {
             sendEmail(e.what());
-        } else {
             this->timeOfLastCrash = currentDate();
         }
     } catch (EmptyPassword e) {
         if (secondsSinceDate(this->timeOfLastCrash) > DEFAULT_TIME_BETWEEN_MAILS) {
             sendEmail(e.what());
-        } else {
             this->timeOfLastCrash = currentDate();
         }
     }
 }
 
 Camera::~Camera() {
-    // //cout << "Destroy camera " << to_string(this->ID) << " : " << currentDate() << endl;
 }
 
 string Camera::GetDirectory() const {
@@ -239,6 +251,14 @@ string Camera::GetUrl() const {
     return this->url;
 }
 
+string Camera::GetName() const {
+    return this->name;
+}
+
+string Camera::GetLog() const {
+    return this->log;
+}
+
 string Camera::GetRTSPurl() const {
     return this->RTSPurl;
 }
@@ -248,7 +268,6 @@ void Camera::SetRTSPurl(string RTSPurl) {
 }
 
 string Camera::getFileName() {
-    // //cout << "start getFileName (" << to_string(this->ID) << ") : " << currentDate() << endl;
     const boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time(); // Get the time offset in current day
     const boost::posix_time::time_duration td = now.time_of_day();
     const long hours = td.hours(); // Current hour
@@ -299,23 +318,17 @@ volatile int Camera::SecondsToRecord = -1;
 bool Camera::setSecondsToRecord(int sec) {
     if (sec < 0) {
         sendEmail("The number of seconds must be positive integer. Number given : " + to_string(sec));
-    }
-    if (SecondsToRecord == -1) {
-        SecondsToRecord = sec;
-        return true;
-    } else { // If the number of seconds to record had already been changed, an error will be thrown
-
         return false;
     }
+    SecondsToRecord = sec;
+    return true;
 }
 
 void Camera::reinitTimeRecord() {
-
     SecondsToRecord = -1;
 }
 
 volatile int Camera::GetSecondsToRecord() {
-
     return SecondsToRecord;
 }
 
@@ -324,7 +337,9 @@ void Camera::startThreadRTSPUrl() {
 }
 
 bool Camera::getFullRTSPUrl(Camera * cam) {
+    cam->SetRTSPurl("");
     // Proxy declarations
+    cout << "start get rtsp url" << endl;
     DeviceBindingProxy proxyDevice;
     MediaBindingProxy proxyMedia;
     string hostname = "http://" + cam->url + "/onvif/device_service";
@@ -333,9 +348,11 @@ bool Camera::getFullRTSPUrl(Camera * cam) {
     if (SOAP_OK != soap_wsse_add_UsernameTokenDigest(proxyDevice.soap, NULL, cam->log.c_str(), cam->password.c_str())) {
         return false;
     }
+    cout << "soap ok 1" << endl;
     if (SOAP_OK != soap_wsse_add_Timestamp(proxyDevice.soap, "Time", 10)) {
         return false;
     }
+    cout << "soap ok 2" << endl;
     soap_destroy(soap);
     soap_end(soap);
     // Get Device capabilities
@@ -345,36 +362,42 @@ bool Camera::getFullRTSPUrl(Camera * cam) {
     if (SOAP_OK == proxyDevice.GetCapabilities(tds__GetCapabilities, tds__GetCapabilitiesResponse) && tds__GetCapabilitiesResponse->Capabilities->Media != NULL) {
         proxyMedia.soap_endpoint = tds__GetCapabilitiesResponse->Capabilities->Media->XAddr.c_str();
     }
+    cout << "soap ok 3" << endl;
     // For MediaBindingProxy
     if (SOAP_OK != soap_wsse_add_UsernameTokenDigest(proxyMedia.soap, NULL, cam->log.c_str(), cam->password.c_str())) {
         return false;
     }
+    cout << "soap ok 4" << endl;
     if (SOAP_OK != soap_wsse_add_Timestamp(proxyMedia.soap, "Time", 10)) {
         return false;
     }
+    cout << "soap ok 5" << endl;
     // Get Device Profiles
     _trt__GetProfiles *trt__GetProfiles = soap_new__trt__GetProfiles(soap, -1);
     _trt__GetProfilesResponse *trt__GetProfilesResponse = soap_new__trt__GetProfilesResponse(soap, -1);
     if (SOAP_OK == proxyMedia.GetProfiles(trt__GetProfiles, trt__GetProfilesResponse)) {
+        cout << "soap ok 6" << endl;
         _trt__GetStreamUri *trt__GetStreamUri = soap_new__trt__GetStreamUri(soap, -1);
         trt__GetStreamUri->StreamSetup = soap_new_tt__StreamSetup(soap, -1);
         trt__GetStreamUri->StreamSetup->Stream = tt__StreamType__RTP_Unicast;
         trt__GetStreamUri->StreamSetup->Transport = soap_new_tt__Transport(soap, -1);
         trt__GetStreamUri->StreamSetup->Transport->Protocol = tt__TransportProtocol__RTSP;
         _trt__GetStreamUriResponse *trt__GetStreamUriResponse = soap_new__trt__GetStreamUriResponse(soap, -1);
+        cout << "before for" << endl;
         for (int i = 0; i < trt__GetProfilesResponse->Profiles.size(); i++) { // Loop for every profile
             trt__GetStreamUri->ProfileToken = trt__GetProfilesResponse->Profiles[i]->token;
             if (SOAP_OK != soap_wsse_add_UsernameTokenDigest(proxyMedia.soap, NULL, cam->log.c_str(), cam->password.c_str())) {
                 return false;
             }
             if (SOAP_OK == proxyMedia.GetStreamUri(trt__GetStreamUri, trt__GetStreamUriResponse)) { // Get Snapshot URI for profile
-                if (trt__GetStreamUriResponse->MediaUri->Uri.find("h264") != string::npos) {
+                if (trt__GetStreamUriResponse->MediaUri->Uri.find("h264") != string::npos && cam->RTSPurl == "") {
                     cam->RTSPurl = trt__GetStreamUriResponse->MediaUri->Uri;
-                } else if (i == 1 && cam->RTSPurl == "") {
+                } else if (cam->RTSPurl == "") {
                     cam->RTSPurl = trt__GetStreamUriResponse->MediaUri->Uri;
                 }
             }
         }
+        cout << "rtsp url : " << cam->RTSPurl << endl;
         if (cam->RTSPurl.size() > 7) {
             cam->RTSPurl = cam->RTSPurl.substr(0, 7) + cam->log + ":" + cam->password + "@" + cam->RTSPurl.substr(7);
         }
@@ -382,4 +405,52 @@ bool Camera::getFullRTSPUrl(Camera * cam) {
     soap_destroy(soap);
     soap_end(soap);
     return true;
+}
+
+void Camera::SetDirectory(string directory) {
+    if (directory.at(directory.length() - 1) == '/') { // add a "/" at the end of the path if there is none
+        this->directory = directory;
+    } else {
+        this->directory = directory + "/";
+    }
+}
+
+void Camera::SetLog(string log) {
+    this->log = log;
+}
+
+void Camera::SetName(string name) {
+    this->name = name;
+}
+
+void Camera::SetNbdays(int nbdays) {
+    this->nbdays = nbdays;
+}
+
+void Camera::SetPassword(string password) {
+    this->password = string(getDecodedPassword(password).c_str());
+}
+
+void Camera::SetTempDirectory(string tempDirectory) {
+    if (tempDirectory.at(tempDirectory.length() - 1) == '/') { // add a "/" at the end of the path if there is none
+        this->directory = tempDirectory;
+    } else {
+        this->directory = tempDirectory + "/";
+    }
+}
+
+void Camera::SetUrl(string url) {
+    this->url = url;
+}
+
+void Camera::stopRecord() {
+    canRecord = false;
+}
+
+void Camera::startRecord() {
+    canRecord = true;
+}
+
+volatile bool Camera::canStillRecord() {
+    return canRecord;
 }

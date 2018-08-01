@@ -28,11 +28,9 @@ Watchdog::Watchdog() {
     string lastMail = "2000:01:01:00:00:00";
     while (1) {
         if (fileExists(fileName)) {
-            cout << "file exists" << endl;
             ifstream file(fileName);
             if (file.is_open()) {
                 getline(file, line);
-                cout << "Line : " << line << endl;
                 if (secondsSinceDate(line) > 180) {
                     if (secondsSinceDate(lastMail) > 10 * 60) {
                         sendEmail("Le manager du serveur ne répondait plus");
@@ -59,7 +57,6 @@ Watchdog::Watchdog() {
                 file.close();
             }
         } else {
-            cout << "file doesn't exist" << endl;
             sleep(5);
             if (!fileExists(fileName)) {
                 signal(SIGCHLD, SIG_IGN);

@@ -30,10 +30,21 @@ public:
     string GetPassword() const;
     string GetUrl() const;
     string GetRTSPurl() const;
+    string GetName() const;
+    string GetLog() const;
 
     void SetRTSPurl(string RTSPurl);
+    void SetDirectory(string directory);
+    void SetLog(string log);
+    void SetName(string name);
+    void SetNbdays(int nbdays);
+    void SetPassword(string password);
+    void SetTempDirectory(string tempDirectory);
+    void SetUrl(string url);
 
     void record();
+    void stopRecord();
+    void startRecord();
 
     static bool setSecondsToRecord(int sec); // Set the time to record for each camera, return false if already set
     static void reinitTimeRecord(); // Set the time to record to -1
@@ -41,7 +52,7 @@ public:
     static bool getFullRTSPUrl(Camera* cam);
     string getFileName(); // Returns the filename, according to the ID, current date and time
     void startThreadRTSPUrl();
-
+    volatile bool canStillRecord();
 private:
     volatile static int SecondsToRecord; /* Positive integer \n\n Number of seconds of each recording */
     string directory; /* Directory where records will be saved */
@@ -54,6 +65,7 @@ private:
     string log; /* Log for the rtsp */
     string password; /* Password for the rtsp */
     string timeOfLastCrash; /* Keep the date of the last email sent */
+    volatile bool canRecord;
 };
 
 #endif /* CAMERA_H */

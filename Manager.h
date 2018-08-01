@@ -49,6 +49,9 @@ private:
     void getListenPort(); // Retrieve the port where notification are sent
     shared_ptr<Camera> getCamByIp(string ip); // Return a camera from an IP, NULL if no camera is found
     void runBufferDir(); // Reboot thread that will move files from buffer to definitive directory if crashed
+    void updateCamList();
+    void CameraUpdate();
+    void resetAllFields();
 };
 
 #endif /* MANAGER_H */

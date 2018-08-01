@@ -24,7 +24,7 @@
 
 #define DEFAULT_TIME_BETWEEN_RECORDS 30 // seconds to wait for each camera after the previous one : 30
 #define DEFAULT_TIME_RECORDS 900 // seconds to record by default : 900 (15min)
-#define DEFAULT_TIME_BETWEEN_MAILS 300 // seconds tbetween 2 mails being sent : 600 (10min)
+#define DEFAULT_TIME_BETWEEN_MAILS 600 // seconds tbetween 2 mails being sent : 600 (10min)
 #define DEFAULT_DAYS_TO_KEEP 30 // numbers of day before a file must be deleted : 30
 #define DEFAULT_TIME_BUFFER_MOVE 60 // number of minutes before the process move the recorded files : 60
 #define AVERAGE_FILE_SIZE 10 // average size of a minute of video record in Mo : 10

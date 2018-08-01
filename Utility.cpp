@@ -48,7 +48,6 @@ public:
 
 /* Verify if every char of a string is a number */
 bool isOnlyNumeric(string &str) {
-    //cout << "start isOnlyNumeric : " << currentDate() << endl;
     for (int positionChar = 0; positionChar < str.size() - 1; ++positionChar) { // iterate through the string
         if (str.at(positionChar) < '0' || str.at(positionChar) > '9') { // true if anything but a number is seen
             return false; // return false if anything but a number is seen
@@ -59,7 +58,6 @@ bool isOnlyNumeric(string &str) {
 
 /* Return the date line to include in the mail */
 static string defineDate() {
-    //cout << "start defineDate : " << currentDate() << endl;
     string date = "";
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
@@ -122,7 +120,6 @@ static string defineDate() {
     } else {
         date += "0" + to_string(now->tm_sec);
     }
-    //cout << "end defineDate : " << currentDate() << endl;
     return "Date :" + date + "\r\n"; // format the date for an email
 }
 
@@ -156,7 +153,6 @@ static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp) 
 }
 
 int sendEmail(string messageContent) {
-    //cout << "start sendEmail : " << currentDate() << endl;
     addLog(messageContent);
     CURL *curl;
     CURLcode res = CURLE_OK;
@@ -177,7 +173,7 @@ int sendEmail(string messageContent) {
         }
         /* This is the configuration of the mailserver */
         curl_easy_setopt(curl, CURLOPT_USERNAME, loginSMTP.c_str());
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, passwordSMTP.c_str()); // TODO encryption
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, passwordSMTP.c_str());
         curl_easy_setopt(curl, CURLOPT_URL, urlSMTP.c_str());
 
         curl_easy_setopt(curl, CURLOPT_MAIL_FROM, FROM_ADDR);
@@ -196,7 +192,6 @@ int sendEmail(string messageContent) {
         curl_slist_free_all(recipients);
         curl_easy_cleanup(curl);
     }
-    //cout << "end sendEmail : " << currentDate() << endl;
     return (int) res;
 }
 
@@ -231,7 +226,6 @@ void deamonize() {
 }
 
 string createDirectoryVideos(string rootDirectory) {
-    //cout << "start createDirectoryVideos : " << currentDate() << endl;
     struct stat info;
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
@@ -250,13 +244,11 @@ string createDirectoryVideos(string rootDirectory) {
         sleep(1);
     }
     mkdir(hour.c_str(), S_IRWXU | S_IRWXG | S_IRWXO); // create directory "H"+HH in previously created directory
-    //cout << "end createDirectoryVideos : " << currentDate() << endl;
     return hour;
 }
 
 /* Calculate the number of days ellapsed since a date formated as "YYYY:MM:DD" */
 static int timeSinceDate(string dateToCompare) {
-    //cout << "start timeSinceDate : " << currentDate() << endl;
     time_t rawtime;
     struct tm* timeinfo;
     time(&rawtime);
@@ -268,13 +260,11 @@ static int timeSinceDate(string dateToCompare) {
     time_t raw_time = time(NULL); // create a time_t struct with current time
     time_t y = mktime(localtime(&raw_time));
     double difference = difftime(y, x) / (60 * 60 * 24); // calculate the number of ms between two dates, convert it in days
-    //cout << "end timeSinceDate : " << currentDate() << endl;
     return difference;
 }
 
 /* Calculate the number of seconds ellapsed since a date formated as "YYYY:MM:DD:HH:MM:SS" */
 int secondsSinceDate(string dateToCompare) {
-    //cout << "start secondsSinceDate : " << currentDate() << endl;
     time_t rawtime;
     struct tm* timeinfo;
     time(&rawtime);
@@ -289,13 +279,11 @@ int secondsSinceDate(string dateToCompare) {
     time_t raw_time = time(NULL); // create a time_t struct with current time
     time_t y = mktime(localtime(&raw_time));
     double difference = difftime(y, x); // calculate the number of ms between two dates, convert it in days
-    //cout << "end secondsSinceDate : " << currentDate() << endl;
     return difference;
 }
 
 /* Calculate the number of seconds ellapsed since a file was recorded */
 int secondsSinceRecord(string fileName) {
-    //cout << "start secondsSinceRecord : " << currentDate() << endl;
     fileName = fileName.substr(fileName.find_first_of("-") + 1);
     time_t rawtime;
     struct tm* timeinfo;
@@ -311,12 +299,10 @@ int secondsSinceRecord(string fileName) {
     time_t raw_time = time(NULL); // create a time_t struct with current time
     time_t y = mktime(localtime(&raw_time));
     double difference = difftime(y, x); // calculate the number of ms between two dates, convert it in days
-    //cout << "end secondsSinceRecord : " << currentDate() << endl;
     return difference;
 }
 
 static void removeContentOfDirectory(string path, bool exact) {
-    //cout << "start removeContentOfDirectory : " << currentDate() << endl;
     time_t t = time(0); // get time now
     struct tm * now = localtime(& t); //get local time
     DIR *dir;
@@ -344,18 +330,16 @@ static void removeContentOfDirectory(string path, bool exact) {
     } else {
         perror("Could not open the directory"); // Set the error message in case of bug
     }
-    //cout << "end removeContentOfDirectory : " << currentDate() << endl;
 }
 
 /* remove every file under path, older than nbDays */
 int removeOldFile(int nbDays, string path) {
-    //cout << "start removeOldFile : " << currentDate() << endl;
     DIR *dir;
     struct dirent *ent;
     if ((dir = opendir(path.c_str())) != NULL) {
         // check all the files and directories within directory
         while ((ent = readdir(dir)) != NULL) {
-            if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
+            if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0 || string(ent->d_name).length() != currentDate().length()) {
                 continue; //Do not iterate on current and parent directories
             }
             // check if the directory is older than nbDays
@@ -370,11 +354,9 @@ int removeOldFile(int nbDays, string path) {
             }
         }
         closedir(dir); //close the directory to prevent any memory leak
-        //cout << "end removeOldFile : " << currentDate() << endl;
         return EXIT_SUCCESS;
     } else { // Set the error message in case of bug
         perror("Could not open the directory");
-        //cout << "end removeOldFile : " << currentDate() << endl;
         return EXIT_FAILURE;
     }
 }
@@ -392,13 +374,11 @@ int configureSMTP() {
             string parameterName = line.substr(0, line.find_first_of("="));
             if (parameterName == "serveur_smtp") {
                 urlSMTP = "smtp://" + string(line.substr(line.find_first_of("=") + 1));
-                urlSMTP = urlSMTP.substr(0, urlSMTP.size() - 1);
             } else if (parameterName == "login_smtp") {
                 loginSMTP = line.substr(line.find_first_of("=") + 1);
-                loginSMTP = loginSMTP.substr(0, loginSMTP.size() - 1);
             } else if (parameterName == "mdp_smtp") {
                 passwordSMTP = line.substr(line.find_first_of("=") + 1);
-                passwordSMTP = passwordSMTP.substr(0, passwordSMTP.size() - 1);
+                passwordSMTP = getDecodedPassword(passwordSMTP);
             }
         }
     }
@@ -421,7 +401,6 @@ int configureSMTP() {
 }
 
 bool fileExists(const string& name) {
-    //cout << "fileExists : " << currentDate() << endl;
     struct stat buffer;
     return (stat(name.c_str(), &buffer) == 0);
 }
@@ -469,7 +448,6 @@ string getLocation() {
 }
 
 void addRunningCamera(string ID) {
-    //cout << "start addRunningCamera : " << currentDate() << endl;
     v_mutex.lock();
     lastLockV = currentDate();
     struct node_t* newNode = new node_t;
@@ -477,7 +455,6 @@ void addRunningCamera(string ID) {
     newNode->next = RunningCameraList;
     RunningCameraList = newNode;
     v_mutex.unlock();
-    //cout << "end addRunningCamera : " << currentDate() << endl;
 }
 
 bool IsInRunningList(string ID) {
@@ -502,7 +479,6 @@ bool IsInRunningList(string ID) {
 
 void deleteNode(string valueToDelete) {
     v_mutex.lock();
-    //cout << "start deleteNode : " << currentDate() << endl;
     lastLockV = currentDate();
     struct node_t* nodeSearch = nullptr;
     struct node_t* previous = nullptr;
@@ -520,7 +496,6 @@ void deleteNode(string valueToDelete) {
             previous->next = nodeSearch->next;
         }
     }
-    //cout << "end deleteNode : " << currentDate() << endl;
     v_mutex.unlock();
 }
 
@@ -580,9 +555,7 @@ bool didCameraCrash(int ID) {
 
 int timeSinceCrashCamera(int IDCam) {
     if (!didCameraCrash(IDCam)) { // If it never crashed, return a large number
-        cout << "Add 6" << endl;
         addCrashedCamera(IDCam);
-        cout << "end timeSinceCrashCamera : " << currentDate() << endl;
         return 9999999;
     }
     mutex_crashed.lock();
@@ -599,7 +572,6 @@ int timeSinceCrashCamera(int IDCam) {
 }
 
 void addCrashedCamera(int ID) {
-    cout << "The camera " << to_string(ID) << " just crashed at " << currentDate() << endl;
     if (!didCameraCrash(ID)) {
         mutex_crashed.lock();
         lastLockCrash = currentDate();
@@ -609,7 +581,6 @@ void addCrashedCamera(int ID) {
 }
 
 void startMoveFromBuffer(int nbdays) {
-    //cout << "start startMoveFromBuffer : " << currentDate() << endl;
     if (bufferDirList.size() > 0) {
         int nbMin = bufferDirList.at(0).nbMin;
         for (bufferDir buff : bufferDirList) {
@@ -617,11 +588,9 @@ void startMoveFromBuffer(int nbdays) {
         }
         sleep(nbMin);
     }
-    //cout << "end startMoveFromBuffer : " << currentDate() << endl;
 }
 
 void MoveForEachDir(string defDir, int nbdays) {
-    //cout << "start MoveForEachDir : " << currentDate() << endl;
     map<int, string> bufferMap;
     int nbMin;
     for (bufferDir buf : bufferDirList) { // Iterate to find the good bufferDir
@@ -630,18 +599,15 @@ void MoveForEachDir(string defDir, int nbdays) {
             nbMin = buf.nbMin;
         }
     }
-    //cout << "before while MoveForEachDir : " << currentDate() << endl;
     while (1) { // every nbMin, move the files recorded from the right cam from each tempDir in the bufferMap to defDir
         runningBufferMove = currentDate();
         removeOldFile(nbdays, defDir);
         int nbdaysTemp = nbdays - 1;
-        //cout << "before second while MoveForEachDir : " << currentDate() << endl;
         while (remainingFreeSpace(defDir) < AVERAGE_FILE_SIZE * Camera::GetSecondsToRecord() / 60) {
             sendEmail("Not enough space left to record in : " + defDir);
             removeOldFile(nbdaysTemp, defDir);
             nbdaysTemp = nbdaysTemp - 1;
         }
-        //cout << "before for MoveForEachDir : " << currentDate() << endl;
         for (auto const &buff : bufferMap) {
             moveFromBufferMemory(defDir, buff.second, buff.first); // buff.first : IDCam, buff.second : tempDir
         }
@@ -650,7 +616,6 @@ void MoveForEachDir(string defDir, int nbdays) {
 }
 
 void moveFromBufferMemory(string& defDir, string tempDir, int IDCam) {
-    //cout << "start moveFromBufferMemory : " << currentDate() << endl;
     DIR * dir;
     DIR * datedir;
     DIR * hourDir;
@@ -666,7 +631,6 @@ void moveFromBufferMemory(string& defDir, string tempDir, int IDCam) {
         if (strcmp(entR->d_name, ".") == 0 || strcmp(entR->d_name, "..") == 0 || string(entR->d_name).substr(0, 2) != "20") {
             continue; //Do not iterate on current and parent directories
         }
-        //cout << "tempdir entR moveFromBufferMemory : " << currentDate() << endl;
         if (fileExists(tempDir + entR->d_name)) { // Prevent caching problems
             if (entR->d_type == DT_DIR) { // Iterate in subdirectories only
                 dateDirName = tempDir + entR->d_name; // root/YYYY.MM.DD
@@ -675,7 +639,6 @@ void moveFromBufferMemory(string& defDir, string tempDir, int IDCam) {
                     if (strcmp(entD->d_name, ".") == 0 || strcmp(entD->d_name, "..") == 0 || string(entD->d_name).substr(0, 1) != "H") {
                         continue; //Do not iterate on current and parent directories
                     }
-                    //cout << "tempdir entR entD moveFromBufferMemory : " << currentDate() << endl;
                     if (fileExists(tempDir + entR->d_name + "/" + entD->d_name)) {
                         if (entD->d_type == DT_DIR) { // Iterate in subdirectories only
                             hourDirName = tempDir + entR->d_name + "/" + entD->d_name; // root/YYYY.MM.DD/HX
@@ -684,7 +647,6 @@ void moveFromBufferMemory(string& defDir, string tempDir, int IDCam) {
                                 if (strcmp(entH->d_name, ".") == 0 || strcmp(entH->d_name, "..") == 0 || string(entH->d_name).substr(0, 1) != "C") {
                                     continue; //Do not iterate on current and parent directories
                                 }
-                                //cout << "before final if moveFromBufferMemory" << currentDate() << endl;
                                 if (string(entH->d_name).substr(1, (string(entH->d_name).find_first_of("-") - 1)) == to_string(IDCam)) {
                                     if (secondsSinceRecord(entH->d_name) > Camera::GetSecondsToRecord() + 30) {
                                         oldName = tempDir + entR->d_name + "/" + entD->d_name + "/" + entH->d_name; // tempDir/YYYY.MM.DD/HX/C(IDCam)-YYYYMMDDD-HHmmssmmm.mp4
@@ -709,12 +671,10 @@ void moveFromBufferMemory(string& defDir, string tempDir, int IDCam) {
             }
         }
     }
-    //cout << "end moveFromBufferMemory : " << currentDate() << endl;
     closedir(dir); // prevent memory leak
 }
 
 void addBufferDir(int nbmin, string defDir, string tempDir, int IDCam) {
-    //cout << "start addBufferDir : " << currentDate() << endl;
     if (defDir.at(defDir.length() - 1) != '/') { // add a "/" at the end of the path if there is none
         defDir = defDir + "/";
     }
@@ -736,7 +696,6 @@ void addBufferDir(int nbmin, string defDir, string tempDir, int IDCam) {
         temp.listBuffer[IDCam] = tempDir;
         bufferDirList.push_back(temp); // Add a new item for defDir
     }
-    //cout << "end addBufferDir : " << currentDate() << endl;
 }
 
 int getSizeListBuffDir() {
@@ -744,12 +703,10 @@ int getSizeListBuffDir() {
 }
 
 string getPathForCameraID(int ID) {
-    //cout << "start addBufferDir : " << currentDate() << endl;
     int indexVec = 0;
     while (indexVec < getSizeListBuffDir()) {
         try {
             if (bufferDirList.at(indexVec).listBuffer[ID] != "") {
-                //cout << "end addBufferDir : " << currentDate() << endl;
                 return bufferDirList.at(indexVec).defDir;
             }
             indexVec++;
@@ -757,12 +714,10 @@ string getPathForCameraID(int ID) {
             indexVec++;
         }
     }
-    //cout << "end addBufferDir : " << currentDate() << endl;
     return "";
 }
 
 void addLog(string log) {
-    //cout << "start addLog : " << currentDate() << endl;
     std::ofstream out;
     struct passwd *pw = getpwuid(getuid());
     string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
@@ -772,21 +727,17 @@ void addLog(string log) {
         out << currentDate() << " : " << log << "\r\n";
     }
     out.close();
-    //cout << "end addLog : " << currentDate() << endl;
 }
 
 string getAvError(int& errorCode) {
-    //cout << "start getAvError : " << currentDate() << endl;
     if (errorCode < 0) {
         errorCode = -errorCode;
     }
     char errorMessage[512];
     int found = av_strerror(errorCode, errorMessage, 512);
     if (found == 0) {
-        //cout << "end getAvError : " << currentDate() << endl;
         return (string(errorMessage));
     } else {
-        //cout << "end getAvError : " << currentDate() << endl;
         return "Unknown error";
     }
 }
@@ -800,11 +751,9 @@ void preventMutexHoldLocked() {
     sleep(60);
     while (1) {
         if (secondsSinceDate(lastLockCrash) > 60 * 2) {
-            //cout << "force unlock mutex crashed : " << currentDate() << endl;
             mutex_crashed.unlock();
         }
         if (secondsSinceDate(lastLockV) > 60 * 2) {
-            //cout << "force unlock mutex V : " << currentDate() << endl;
             v_mutex.unlock();
         }
         sleep(60);

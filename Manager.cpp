@@ -41,9 +41,9 @@ Manager::Manager() {
     remove(runfileName.c_str());
     ofstream runfile(runfileName);
     runfile << currentDate() << endl;
-    name = "", log = "", password = "", url = "", path = "", tempPath = "", repertoireDefaut = "";
-    ID = -1, nbdays = -1, nbMinBetweenMoveBuffer = -1;
-
+    repertoireDefaut = "";
+    nbdays = -1, nbMinBetweenMoveBuffer = -1;
+    resetAllFields();
     int enregistrable = -1;
     bool firstCamera = true; // Prevent a bug for the start of the first camera
     int nbLinesRead = 0; // Keep the number of the current line to send it as detail if an error is encountered
@@ -73,33 +73,33 @@ Manager::Manager() {
                     }
                 } else if (parameterName == "Nom") {
                     if (name == "") { // if no name is set for the current camera
-                        name = parameterValue.substr(0, parameterValue.length() - 1);
+                        name = parameterValue;
                     } else { // two names are defined for the same camera
-                        throw DuplicateField("Name (" + name.substr(0, name.size() - 1) + ")");
+                        throw DuplicateField("Name (" + name + ")");
                     }
                 } else if (parameterName == "Login") {
                     if (log == "") { // if no log is set for the current camera
-                        log = parameterValue.substr(0, parameterValue.length() - 1);
+                        log = parameterValue;
                     } else { // two logs are defined for the same camera
-                        throw DuplicateField("Log (" + log.substr(0, log.size() - 1) + ")");
+                        throw DuplicateField("Log (" + log + ")");
                     }
                 } else if (parameterName == "Mdps") {
                     if (password == "") { // if no password is set for the current camera
-                        password = parameterValue.substr(0, parameterValue.length() - 1);
+                        password = parameterValue;
                     } else { // two passwords are defined for the same camera
-                        throw DuplicateField("Password (" + password.substr(0, password.size() - 1) + ")");
+                        throw DuplicateField("Password (" + password + ")");
                     }
                 } else if (parameterName == "IP") {
                     if (url.find(".") == string::npos) { // if no url is set for the current camera
-                        url = parameterValue.substr(0, parameterValue.length() - 1) + url;
+                        url = parameterValue + url;
                     } else { // two URLs are defined for the same camera
-                        throw DuplicateField("IP (" + url.substr(0, url.size() - 1) + ")");
+                        throw DuplicateField("IP (" + url + ")");
                     }
                 } else if (parameterName == "PortHTTP") {
                     if (url.find(":") == string::npos) {
-                        url = url + ":" + parameterValue.substr(0, parameterValue.length() - 1);
+                        url = url + ":" + parameterValue;
                     } else {
-                        throw DuplicateField("PortHTTP (" + url.substr(0, url.size() - 1) + ")");
+                        throw DuplicateField("PortHTTP (" + url + ")");
                     }
                 } else if (parameterName == "Enregistrable") {
                     enregistrable = atoi(parameterValue.c_str());
@@ -109,9 +109,10 @@ Manager::Manager() {
                 } else if (parameterName == "DossierEnreg") {
                     if (path == "") {
                         if (repertoireDefaut == "") {
-                            repertoireDefaut = parameterValue.substr(0, parameterValue.length() - 1);
+                            repertoireDefaut = parameterValue;
+                        } else {
+                            path = parameterValue;
                         }
-                        path = parameterValue.substr(0, parameterValue.length() - 1);
                     } else { //only one saving directory can be specified
                         throw DuplicateField("Path");
                     }
@@ -123,7 +124,7 @@ Manager::Manager() {
                             throw DuplicateField("Number of days to stock");
                         }
                     } else {
-                        throw InvalidNbDays(parameterValue.substr(0, parameterValue.size() - 1));
+                        throw InvalidNbDays(parameterValue);
                     }
                 } else if (parameterName == "Site") {
                     if (!setLocation(parameterValue)) { // Check if the location hasn't been changed yet
@@ -149,7 +150,7 @@ Manager::Manager() {
                     if (this->tempPath != "") { // Check if ther is not two buffer directory declared for one camera
                         throw DuplicateField("Buffer directory");
                     } else {
-                        tempPath = parameterValue.substr(0, parameterValue.length() - 1);
+                        tempPath = parameterValue;
                     }
                 } else if (parameterName == "NbMinBuffer") {
                     if (isOnlyNumeric(parameterValue)) { //check if the number of minutes between each move from buffer to final directory  is a positive integer
@@ -170,15 +171,17 @@ Manager::Manager() {
                 if (line.substr(0, line.size() - 1).empty()) { //if the line is empty
                     throw EmptyLine(to_string(nbLinesRead));
                 } else { // the line is invalid
-                    throw InvalidLine(line.substr(0, line.size() - 1));
+                    throw InvalidLine(line);
                 }
             }
         }
         CameraOver(enregistrable); // check for the last camera of the file
+        file.close();
     } catch (CustomException &e) { // If an error is thrown, print it on the terminal
         cerr << e.what() << " on line : " << nbLinesRead << endl; // If any error is encountered, display the error and the line
         string error = "Error in config file given as parameter for the Manager\nThe file : " + string(pw->pw_dir) + "/.VideoRecorder/cameras.ini" + " returned an " + string(e.what()) + " on line " + to_string(nbLinesRead) + "\n\n";
         sendEmail(error); // And send it by email
+        file.close();
         exit(EXIT_FAILURE); // Quit the constructor
     }
 }
@@ -215,13 +218,7 @@ void Manager::CameraOver(int &enregistrable) {
             mutex_camlist.unlock();
         }
         // Reset all fields
-        ID = -1;
-        name = "";
-        log = "";
-        password = "";
-        url = "";
-        path = "";
-        tempPath = "";
+        resetAllFields();
         enregistrable = -1;
     } else {
         // At least one field is not complete
@@ -266,19 +263,18 @@ void Manager::startRecords() {
             sleep(nbSecBetweenRecords); // wait between the start of each record
         }
     }
+    boost::thread(&Manager::updateCamList, this);
     boost::thread(preventMutexHoldLocked);
     while (1) { // make sure every camera is still recording
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
+        mutex_camlist.lock();
         for (const auto &camera : CameraList) {
-            if (!IsInRunningList(to_string(camera->GetID()))) { // If the camera isn't running
+            if (!IsInRunningList(to_string(camera->GetID())) && camera->canStillRecord()) { // If the camera isn't running
                 if (!didCameraCrash(camera->GetID())) {
                     addCrashedCamera(camera->GetID());
                 }
                 if (timeSinceCrashCamera(camera->GetID()) > 10 * 60 && camera->GetRTSPurl() != "") { // Don't send 2 mails in less than 10 min
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
-                } else if (camera->GetRTSPurl() == "") {
-                    camera->startThreadRTSPUrl();
-                    sleep(5);
                 }
                 boost::thread(&Camera::record, camera); // Restart the record
                 sleep(nbSecBetweenRecords); // wait so there isn't two records starting a the same time
@@ -286,6 +282,7 @@ void Manager::startRecords() {
                 deleteNode(to_string(camera->GetID())); // Remove the camera from the list
             }
         }
+        mutex_camlist.unlock();
         sleep(60); // Run every minute
     }
 }
@@ -445,7 +442,6 @@ shared_ptr<Camera> Manager::getCamByIp(string ip) {
     for (const auto &cam : CameraList) {
         if (cam->GetUrl().find(":") != string::npos) {
             if (cam->GetUrl().substr(0, cam->GetUrl().find_first_of(":")) == ip) { //get IP by cuttin the port and following
-                //cout << "End get cam by ip (found) : " << currentDate() << endl;
                 return cam; // return the found camera
             }
         }
@@ -465,4 +461,271 @@ void Manager::runBufferDir() {
             sleep(nbMin * 3);
         }
     }
+}
+
+void Manager::CameraUpdate() {
+    bool found = false;
+    bool needRestart = false;
+    if (ID != -1 && name != "" && log != "" && password != "" && url != "") {
+        mutex_camlist.lock();
+        for (const auto &camera : CameraList) {
+            if (camera->GetID() == ID) { // Make sure there is not two cameras with the same ID
+                if (path == "") {
+                    if (camera->GetDirectory() != repertoireDefaut) {
+                        camera->SetDirectory(repertoireDefaut);
+                        needRestart = true;
+                    }
+                } else {
+                    if (camera->GetDirectory() != path) {
+                        camera->SetDirectory(path);
+                        needRestart = true;
+                    }
+                }
+                if (camera->GetUrl() != url) {
+                    camera->SetUrl(url);
+                    needRestart = true;
+                }
+                if (camera->GetPassword() != getDecodedPassword(password)) {
+                    camera->SetPassword(password);
+                    needRestart = true;
+                }
+                if (tempPath != "") {
+                    if (camera->GetDirectory() != tempPath) {
+                        camera->SetTempDirectory(tempPath);
+                        needRestart = true;
+                    }
+                }
+                if (camera->GetLog() != log) {
+                    camera->SetLog(log);
+                    needRestart = true;
+                }
+                if (camera->GetName() != name) {
+                    camera->SetName(name);
+                    needRestart = true;
+                }
+                found = true;
+
+            }
+        }
+        mutex_camlist.unlock();
+        if (!found) { // If all the fields are completed and the camera can be recorded
+            needRestart = true;
+            mutex_camlist.lock();
+            if (tempPath != "") {
+                CameraList.push_back(make_shared<Camera>(tempPath, ID, name, log, password, url));
+                if (nbMinBetweenMoveBuffer == -1) {
+                    nbMinBetweenMoveBuffer = DEFAULT_TIME_BUFFER_MOVE; // If there is no number of minute between each move from buffer memory, default (60) is applied
+                }
+                if (path == "") {
+                    addBufferDir(nbMinBetweenMoveBuffer, repertoireDefaut, tempPath, ID);
+                } else {
+                    addBufferDir(nbMinBetweenMoveBuffer, path, tempPath, ID);
+                }
+            } else {
+                if (path == "") {
+                    CameraList.push_back(make_shared<Camera>(repertoireDefaut, nbdays, ID, name, log, password, url)); // Create a list of camera
+                } else {
+                    CameraList.push_back(make_shared<Camera>(path, nbdays, ID, name, log, password, url)); // Create a list of camera
+                }
+            }
+            mutex_camlist.unlock();
+        }
+        for (const auto &camera : CameraList) {
+            if (camera->GetID() == ID) {
+                if (needRestart) {
+                    camera->startThreadRTSPUrl();
+                    sleep(1);
+                    camera->stopRecord();
+                    camera->startRecord();
+                    boost::thread(&Camera::record, camera);
+                    sleep(nbSecBetweenRecords); // wait between the start of each record
+                }
+            }
+        }
+    }
+}
+
+void Manager::updateCamList() {
+    int nbLinesRead = 0;
+    sleep(5);
+    string fileUpdateName = "/root/.VideoRecorderFiles/ConfigFiles/UpdateCam.txt";
+    string fileToRead = "/root/.VideoRecorderFiles/ConfigFiles/cameras.ini";
+    while (1) {
+        if (fileExists(fileUpdateName) && fileExists(fileToRead)) {// Check if the config file is at the right place
+            vector<int> newCameras;
+            name = "", log = "", password = "", url = "", path = "", tempPath = "", repertoireDefaut = "";
+            ID = -1, nbdays = -1, nbMinBetweenMoveBuffer = -1;
+            int error = 0;
+            int enregistrable = -1;
+            bool firstCamera = true; // Prevent a bug for the start of the first camera
+            ifstream file(fileToRead);
+            if (!file.is_open()) { // Check if the config file is at the right place
+                error = 1;
+            }
+            string line;
+            regex ChangeCam("^\\[CAMERA");
+            try {
+                string parameterName = "", parameterValue = "";
+                while (std::getline(file, line) && error != 1) { // iterate through each line of the configuration file
+                    nbLinesRead++;
+                    if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
+                        parameterName = line.substr(0, line.find_first_of("="));
+                        parameterValue = line.substr(line.find_first_of("=") + 1);
+                        if (parameterName == "ID") {
+                            if (isOnlyNumeric(parameterValue)) { // check if the ID is a positive integer
+                                if (ID == -1) { // if no ID is set for the current camera
+                                    ID = atoi(parameterValue.c_str());
+                                } else { // two IDs are defined for the same camera
+                                    throw DuplicateField("ID");
+                                }
+                            } else { // The id is not a positive integer
+                                throw InvalidID(parameterValue);
+                            }
+                        } else if (parameterName == "Nom") {
+                            if (name == "") { // if no name is set for the current camera
+                                name = parameterValue;
+                            } else { // two names are defined for the same camera
+                                throw DuplicateField("Nom");
+                            }
+                        } else if (parameterName == "Login") {
+                            if (log == "") { // if no log is set for the current camera
+                                log = parameterValue;
+                            } else { // two logs are defined for the same camera
+                                throw DuplicateField("Login");
+                            }
+                        } else if (parameterName == "Mdps") {
+                            if (password == "") { // if no password is set for the current camera
+                                password = parameterValue;
+                            } else { // two passwords are defined for the same camera
+                                throw DuplicateField("Mot de passe sodium");
+                            }
+                        } else if (parameterName == "IP") {
+                            if (url.find(".") == string::npos) { // if no url is set for the current camera
+                                url = parameterValue + url;
+                            } else { // two URLs are defined for the same camera
+                                throw DuplicateField("IP");
+                            }
+                        } else if (parameterName == "PortHTTP") {
+                            if (url.find(":") == string::npos) {
+                                url = url + ":" + parameterValue;
+                            } else {
+                                throw DuplicateField("PortHTTP");
+                            }
+                        } else if (parameterName == "Enregistrable") {
+                            enregistrable = atoi(parameterValue.c_str());
+                            if (enregistrable != 0 && enregistrable != 1) { //if field not equal to 0 or 1, throw error
+                                throw InvalidLine("enregistrable must be 0 or 1");
+                            }
+                        } else if (parameterName == "DossierEnreg") {
+                            if (path == "") {
+                                if (repertoireDefaut == "") {
+                                    repertoireDefaut = parameterValue;
+                                }
+                                path = parameterValue;
+                            } else { //only one saving directory can be specified
+                                throw DuplicateField("chemin de stockage");
+                            }
+                        } else if (parameterName == "NbJourStock") {
+                            if (isOnlyNumeric(parameterValue)) { //check if the number of days to keep is a positive integer
+                                if (nbdays == -1) {
+                                    nbdays = atoi(parameterValue.c_str());
+                                } else { //throw error if two number of days are specified
+                                    throw DuplicateField("nombre de jour de stockage");
+                                }
+                            } else {
+                                throw InvalidNbDays(parameterValue);
+                            }
+                        } else if (parameterName == "nbSecondsRecord") {
+                            if (isOnlyNumeric(parameterValue)) { //check if the number of seconds to record is a positive integer
+                                if (!Camera::setSecondsToRecord(atoi(parameterValue.c_str()))) {
+                                    throw DuplicateField("nombre de secondes à enregistrer");
+                                }
+                            }
+                        } else if (parameterName == "nbSecondsBetweenRecord") {
+                            if (isOnlyNumeric(parameterValue)) { //check if the number of seconds between each record is a positive integer
+                                this->nbSecBetweenRecords = atoi(parameterValue.c_str());
+                            }
+                        } else if (parameterName == "DossierTampon") {
+                            if (this->tempPath != "") { // Check if ther is not two buffer directory declared for one camera
+                                throw DuplicateField("Dossier tampon");
+                            } else {
+                                tempPath = parameterValue;
+                            }
+                        } else if (parameterName == "NbMinBuffer") {
+                            if (isOnlyNumeric(parameterValue)) { //check if the number of minutes between each move from buffer to final directory  is a positive integer
+                                if (this->nbMinBetweenMoveBuffer != -1) {
+                                    throw DuplicateField("Time between moves from buffer");
+                                } else {
+                                    this->nbMinBetweenMoveBuffer = atoi(parameterValue.c_str());
+                                }
+                            }
+                        }
+                    } else if (regex_search(line, ChangeCam)) { //When changing camera config, check if previous is ok
+                        if (!firstCamera) { // no check for start of first camera
+                            if (enregistrable == 1) {
+                                newCameras.push_back(ID);
+                                CameraUpdate();
+                            } else {
+                                for (const auto &camera : CameraList) {
+                                    if (camera->GetID() == ID) {
+                                        camera->stopRecord();
+                                    }
+                                }
+                            }
+                        } else {
+                            firstCamera = false;
+                        }
+                        resetAllFields();
+                        enregistrable = -1;
+                    } else if (!regex_search(line, regex("^\\[PARAM]"))) { //Do nothin for line declaring start of params
+                        throw InvalidLine(line);
+                    }
+                }
+                if (error != 1) {
+                    if (enregistrable == 1) {
+                        newCameras.push_back(ID);
+                        CameraUpdate();
+                    } else {
+                        int pos = 0;
+                        for (const auto &camera : CameraList) {
+                            if (camera->GetID() == ID) {
+                                camera->stopRecord();
+                            }
+                            pos++;
+                        }
+                    }
+                    for (const auto &camera : CameraList) {
+                        bool found = false;
+                        int i = 0;
+                        while (!found && i < newCameras.size()) {
+                            if (camera->GetID() == newCameras.at(i)) {
+                                found = true;
+                            }
+                            i++;
+                        }
+                        if (!found) {
+                            camera->stopRecord();
+                        }
+                    }
+                }
+                newCameras.clear();
+                file.close();
+            } catch (CustomException &e) { // If an error is thrown, print it on the terminal
+                sendEmail("Le nouveau fichier de configuration contient une erreur : " + string(e.what()) + " sur la ligne " + to_string(nbLinesRead));
+            }
+            file.close();
+            remove(fileUpdateName.c_str());
+        }
+        sleep(60);
+    }
+}
+
+void Manager::resetAllFields() {
+    ID = -1;
+    name = "";
+    log = "";
+    password = "";
+    url = "";
+    path = "";
+    tempPath = "";
 }
