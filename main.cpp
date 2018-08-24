@@ -17,10 +17,12 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <string.h>
+#include <signal.h>
 
 using namespace std;
 
 int main() {
+    signal(SIGCHLD, SIG_IGN);
     string toRemove = "/var/www/html/public/.infos.dat";
     remove(toRemove.c_str());
     int error = configureSMTP();

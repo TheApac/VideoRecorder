@@ -40,6 +40,7 @@ private:
     string url;
     string repertoireDefaut;
     /* ------------------------------------------------------- */
+    static bool stopping; // False by default, true when SIGTERM is received
     int listenPort; // Port where movement notification are sent
     int nbMinBetweenMoveBuffer;
     int nbSecBetweenRecords = -1;
@@ -52,6 +53,8 @@ private:
     void updateCamList();
     void CameraUpdate();
     void resetAllFields();
+    void stopAllRecords();
+    static void signalHandler(int signum);
 };
 
 #endif /* MANAGER_H */

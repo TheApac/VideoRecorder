@@ -83,5 +83,10 @@ public:
     EmptyPassword(std::string const& msg); /* Exception to throw when the encrypted password was erroneous */
 };
 
+class DirectoryNotExist : public CustomException {
+public:
+    DirectoryNotExist(std::string const& msg); /* Exception to throw when the directory in which the camera has to record doesn't exist */
+};
+
 #endif /* CUSTOMEXCEPTION_H */
 

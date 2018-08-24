@@ -63,15 +63,15 @@ Camera::Camera(string& tempPath, int& ID, string& name, string& log, string& pas
 
 void Camera::record() {
     try {
-        cout << "start : " << endl;
+        if (!fileExists(this->directory)) {
+            throw DirectoryNotExist(this->directory);
+        }
         if (this->password == "") {
-            cout << "erreur decodage" << endl;
             throw EmptyPassword(this->name + " (" + to_string(this->ID) + ")");
         }
         this->startThreadRTSPUrl();
         sleep(5);
         if (this->RTSPurl == "") {
-            cout << "erreur rtsp" << endl;
             throw InvalidOnvifConf(this->name + " (" + to_string(this->ID) + ")" + " log : " + this->log + ", pass : " + this->password + ".");
         } else {
             if (nbdays != -1) {
@@ -85,7 +85,6 @@ void Camera::record() {
                     }
                 }
             }
-            cout << "start avformat" << endl;
             AVFormatContext* context = avformat_alloc_context();
             AVPacket packet; // packet sent by the camera
             av_init_packet(&packet);
@@ -103,7 +102,6 @@ void Camera::record() {
             } else {
                 addLog(getAvError(averr));
             }
-            cout << "no erreur 1" << endl;
             if (!error) {
                 averr = avformat_find_stream_info(context, NULL);
                 if (averr < 0) { // retrieve informations of the stream
@@ -114,7 +112,6 @@ void Camera::record() {
                     error = true;
                 }
             }
-            cout << "no erreur 2" << endl;
             if (!error) {
                 int video_stream_index; // keep the index of the video stream
                 for (int i = 0; i < context->nb_streams; i++) { //search video stream
@@ -147,30 +144,23 @@ void Camera::record() {
                             }
                         }
                     }
-                    cout << "no erreur 3" << endl;
                     if (!error) {
                         AVStream* stream = NULL;
                         stream = avformat_new_stream(oc, context->streams[video_stream_index]->codec->codec); // save which stream to mux
                         avcodec_copy_context(stream->codec, context->streams[video_stream_index]->codec); // set infos to the camera's ones
                         stream->sample_aspect_ratio = context->streams[video_stream_index]->codec->sample_aspect_ratio; //set the file dimensions ratio
-                        //                        stream->r_frame_rate = context->streams[video_stream_index]->r_frame_rate;
-                        //                        stream->avg_frame_rate = stream->r_frame_rate;
-                        //                        stream->time_base = av_inv_q(stream->r_frame_rate);
-                        //                        stream->codec->time_base = stream->time_base;
                         averr = avformat_write_header(oc, NULL); // write the header in the out file
                         if (averr < 0) { // Header couldn't be written
                             error = true;
                             addLog(getAvError(averr));
                         }
                     }
-                    cout << "no erreur 4" << endl;
                     if (!error) {
                         bool recordNext = false; // start only one other recording
                         time_t t = time(0);
                         long int secondsToStop = time(&t) + SecondsToRecord; // save when to stop recording this video
                         int lostframe = 0; // Saves the number of frames lost
                         removeCrashedCameraByID(this->GetID());
-                        cout << "start record" << endl;
                         while (canStillRecord() && time(&t) < secondsToStop) { // Loop while the file is not at its max time and frames are available
                             if (!IsInRunningList(to_string(this->ID))) { // If the camera isn't in the list of running cameras
                                 thread(addRunningCamera, to_string(this->ID)); // Add itself to it
@@ -221,6 +211,11 @@ void Camera::record() {
             this->timeOfLastCrash = currentDate();
         }
     } catch (EmptyPassword e) {
+        if (secondsSinceDate(this->timeOfLastCrash) > DEFAULT_TIME_BETWEEN_MAILS) {
+            sendEmail(e.what());
+            this->timeOfLastCrash = currentDate();
+        }
+    } catch (DirectoryNotExist e) {
         if (secondsSinceDate(this->timeOfLastCrash) > DEFAULT_TIME_BETWEEN_MAILS) {
             sendEmail(e.what());
             this->timeOfLastCrash = currentDate();

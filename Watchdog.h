@@ -18,6 +18,9 @@ class Watchdog {
 public:
     Watchdog();
     virtual ~Watchdog();
+private:
+    static void signalHandler(int signum);
+    static bool stopping;
 };
 
 #endif /* WATCHDOG_H */

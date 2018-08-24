@@ -56,3 +56,7 @@ InvalidOnvifConf::InvalidOnvifConf(std::string const &msg) : CustomException("In
 
 EmptyPassword::EmptyPassword(std::string const &msg) : CustomException("Empty password for camera : " + msg + ", the encrypted password given couldn't be decrypted") {
 }
+
+DirectoryNotExist::DirectoryNotExist(std::string const &msg) : CustomException("The directory : " + msg + " doesn't exist, the camera couldn't start recording") {
+}
+

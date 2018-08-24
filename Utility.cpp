@@ -7,7 +7,6 @@
 #include <string>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <string>
 #include "CustomException.h"
 #include <curl/curl.h>
 #include <iostream>
@@ -259,7 +258,7 @@ static int timeSinceDate(string dateToCompare) {
     time_t x = mktime(timeinfo); // create a time_t struct from the timeinfo
     time_t raw_time = time(NULL); // create a time_t struct with current time
     time_t y = mktime(localtime(&raw_time));
-    double difference = difftime(y, x) / (60 * 60 * 24); // calculate the number of ms between two dates, convert it in days
+    double difference = difftime(y, x) / (60 * 60 * 24); // calculate the number of s between two dates, convert it in days
     return difference;
 }
 
@@ -278,7 +277,7 @@ int secondsSinceDate(string dateToCompare) {
     time_t x = mktime(timeinfo); // create a time_t struct from the timeinfo
     time_t raw_time = time(NULL); // create a time_t struct with current time
     time_t y = mktime(localtime(&raw_time));
-    double difference = difftime(y, x); // calculate the number of ms between two dates, convert it in days
+    double difference = difftime(y, x); // calculate the number of s between two dates
     return difference;
 }
 
@@ -298,7 +297,7 @@ int secondsSinceRecord(string fileName) {
     time_t x = mktime(timeinfo); // create a time_t struct from the timeinfo
     time_t raw_time = time(NULL); // create a time_t struct with current time
     time_t y = mktime(localtime(&raw_time));
-    double difference = difftime(y, x); // calculate the number of ms between two dates, convert it in days
+    double difference = difftime(y, x); // calculate the number of s between two dates
     return difference;
 }
 
@@ -363,10 +362,10 @@ int removeOldFile(int nbDays, string path) {
 
 int configureSMTP() {
     struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    ifstream file(directoryOfFiles + "/ConfigFiles/2NWatchDog.ini");
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorder";
+    ifstream file(directoryOfFiles + "/Config/2NWatchDog.ini");
     if (!file.is_open()) {
-        cerr << directoryOfFiles << "/ConfigFiles/2NWatchDog.ini was not found" << endl;
+        cerr << directoryOfFiles << "/Config/2NWatchDog.ini was not found" << endl;
     }
     string line;
     while (getline(file, line) && (urlSMTP == "" || loginSMTP == "" || passwordSMTP == "")) { // iterate through the file while the configuration isn't over
@@ -720,8 +719,8 @@ string getPathForCameraID(int ID) {
 void addLog(string log) {
     std::ofstream out;
     struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    string logFileName = directoryOfFiles + "/.logs"; // Path to log file
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorder";
+    string logFileName = directoryOfFiles + "/logs"; // Path to log file
     out.open(logFileName.c_str(), std::ios::app);
     if (log != "Success") { // Don't print code Success in log
         out << currentDate() << " : " << log << "\r\n";
@@ -781,7 +780,12 @@ string hex2bin(std::string const& s) {
 
 string getDecodedPassword(string& encryptedPassword) {
     try {
-        return crypto_secretbox_open(hex2bin(encryptedPassword), hex2bin(NONCE_SECRETBOX), hex2bin(KEY_SECRETBOX));
+        encryptedPassword = base64_decode(encryptedPassword);
+        string nonce = encryptedPassword.substr(0, crypto_secretbox_NONCEBYTES);
+        string password = encryptedPassword.substr(crypto_secretbox_NONCEBYTES);
+        string key = string(KEY_SECRETBOX);
+        key = base64_decode(key);
+        return crypto_secretbox_open(password, nonce, key);
     } catch (const char *e) {
         return "";
     } catch (std::exception const &e) {
@@ -797,4 +801,23 @@ vector<string> explode(string const& s) {
         result.push_back(std::move(token));
     }
     return result;
+}
+
+string base64_decode(std::string const& encoded) {
+    std::string out;
+
+    std::vector<int> T(256, -1);
+    for (int i = 0; i < 64; i++) T["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i]] = i;
+
+    int val = 0, valb = -8;
+    for (unsigned char c : encoded) {
+        if (T[c] == -1) break;
+        val = (val << 6) + T[c];
+        valb += 6;
+        if (valb >= 0) {
+            out.push_back(char((val >> valb)&0xFF));
+            valb -= 8;
+        }
+    }
+    return out;
 }

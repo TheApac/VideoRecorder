@@ -29,6 +29,7 @@
 
 static boost::mutex mutex_camlist;
 static boost::mutex m_ip;
+bool Manager::stopping = false;
 
 Manager::Manager() {
     if (isRunningManager()) { //If a manager is Running, don't start a new one
@@ -36,7 +37,7 @@ Manager::Manager() {
     }
     setLocation(""); //Reinit location
     struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorder";
     string runfileName = directoryOfFiles + "/.RunningVideoRecorder"; // Save the path to the file that show it's still running
     remove(runfileName.c_str());
     ofstream runfile(runfileName);
@@ -47,9 +48,9 @@ Manager::Manager() {
     int enregistrable = -1;
     bool firstCamera = true; // Prevent a bug for the start of the first camera
     int nbLinesRead = 0; // Keep the number of the current line to send it as detail if an error is encountered
-    ifstream file(directoryOfFiles + "/ConfigFiles/cameras.ini");
+    ifstream file(directoryOfFiles + "/Config/cameras.ini");
     if (!file.is_open()) { // Check if the config file is at the right place
-        sendEmail("File " + directoryOfFiles + "/ConfigFiles/cameras.ini was not found");
+        sendEmail("File " + directoryOfFiles + "/Config/cameras.ini was not found");
         exit(EXIT_FAILURE);
     }
     string line;
@@ -136,7 +137,7 @@ Manager::Manager() {
                             throw DuplicateField("Number of seconds to record");
                         }
                     }
-                } else if (parameterName == "nbSecondsBetweenRecord") {
+                } else if (parameterName == "DepartDiff") {
                     if (isOnlyNumeric(parameterValue)) { //check if the number of seconds between each record is a positive integer
                         if (this->nbSecBetweenRecords != -1) { //check if the number of seconds between each record hasn't been changed yet
                             throw DuplicateField("Number of seconds between record");
@@ -246,13 +247,15 @@ Manager::~Manager() {
 /* Start to record each cameras
  Check if they are still running, reboot them if not */
 void Manager::startRecords() {
-    deamonize();
+    Manager::stopping = false;
+    signal(SIGTERM, signalHandler);
     if (nbSecBetweenRecords == -1) {
         nbSecBetweenRecords = DEFAULT_TIME_BETWEEN_RECORDS;
     }
     boost::thread(&Manager::updateTime, this);
     boost::thread(startMoveFromBuffer, nbdays);
     boost::thread(runBufferDir);
+    boost::thread(&Manager::stopAllRecords, this);
     boost::thread(&Manager::startMvmtDetect, this);
     getListenPort();
     for (const auto &camera : CameraList) {
@@ -265,7 +268,7 @@ void Manager::startRecords() {
     }
     boost::thread(&Manager::updateCamList, this);
     boost::thread(preventMutexHoldLocked);
-    while (1) { // make sure every camera is still recording
+    while (!stopping) { // make sure every camera is still recording
         removeOldCrashedCameras(); // remove the cameras that crashed over 10min ago
         mutex_camlist.lock();
         for (const auto &camera : CameraList) {
@@ -273,7 +276,7 @@ void Manager::startRecords() {
                 if (!didCameraCrash(camera->GetID())) {
                     addCrashedCamera(camera->GetID());
                 }
-                if (timeSinceCrashCamera(camera->GetID()) > 10 * 60 && camera->GetRTSPurl() != "") { // Don't send 2 mails in less than 10 min
+                if (timeSinceCrashCamera(camera->GetID()) > DEFAULT_TIME_BETWEEN_MAILS && camera->GetRTSPurl() != "") { // Don't send 2 mails in less than 10 min
                     sendEmail("The recording of the camera of ID " + to_string(camera->GetID()) + " crashed.\nThe video recorder tried to reboot it");
                 }
                 boost::thread(&Camera::record, camera); // Restart the record
@@ -283,7 +286,7 @@ void Manager::startRecords() {
             }
         }
         mutex_camlist.unlock();
-        sleep(60); // Run every minute
+        sleep(nbSecBetweenRecords); // Run every minute
     }
 }
 
@@ -297,7 +300,7 @@ void Manager::updateTime() {
         initFile << camera->GetID() << "/" << currentDate() << "/" << "OK" << endl;
     }
     initFile.close();
-    while (1) { // Write the current time in the file every 30 seconds
+    while (!stopping) { // Write the current time in the file every 30 seconds
         ofstream tempFile(fileToWrite);
         ifstream inFile(fileToRead);
         string line;
@@ -336,7 +339,7 @@ void Manager::updateTime() {
 }
 
 void Manager::startMvmtDetect() {
-    while (1) {
+    while (!stopping) {
         m_ip.lock(); // Only one detection at the same time
         detectMvmt();
     }
@@ -424,8 +427,8 @@ void Manager::detectMvmt() {
 void Manager::getListenPort() {
     listenPort = -1;
     struct passwd *pw = getpwuid(getuid());
-    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorderFiles";
-    ifstream file(directoryOfFiles + "/ConfigFiles/2NWatchDog.ini");
+    string directoryOfFiles = string(pw->pw_dir) + "/.VideoRecorder";
+    ifstream file(directoryOfFiles + "/Config/2NWatchDog.ini");
     string line;
     while (getline(file, line) && listenPort == -1) { //iterate through the file while the configuration isn't over
         if (line.find_first_of("=") != string::npos) { // Dealing differently with separation lines
@@ -454,7 +457,7 @@ void Manager::runBufferDir() {
     if (bufferDirList.size() > 0) {
         int nbMin = bufferDirList.at(0).nbMin; // gets the number of minutes between move
         sleep(10);
-        while (1) {
+        while (!stopping) {
             if (secondsSinceDate(runningBufferMove) > nbMin * 3) { // wait for 3 loop before checking
                 boost::thread(startMoveFromBuffer, nbdays);
             }
@@ -548,9 +551,9 @@ void Manager::CameraUpdate() {
 void Manager::updateCamList() {
     int nbLinesRead = 0;
     sleep(5);
-    string fileUpdateName = "/root/.VideoRecorderFiles/ConfigFiles/UpdateCam.txt";
-    string fileToRead = "/root/.VideoRecorderFiles/ConfigFiles/cameras.ini";
-    while (1) {
+    string fileUpdateName = "/root/.VideoRecorder/Config/UpdateCam.txt";
+    string fileToRead = "/root/.VideoRecorder/Config/cameras.ini";
+    while (!stopping) {
         if (fileExists(fileUpdateName) && fileExists(fileToRead)) {// Check if the config file is at the right place
             vector<int> newCameras;
             name = "", log = "", password = "", url = "", path = "", tempPath = "", repertoireDefaut = "";
@@ -728,4 +731,20 @@ void Manager::resetAllFields() {
     url = "";
     path = "";
     tempPath = "";
+}
+
+void Manager::stopAllRecords() {
+    while (!stopping) {
+    }
+    for (const auto &camera : CameraList) {
+        camera->stopRecord();
+    }
+    mutex_camlist.lock();
+    v_mutex.lock();
+}
+
+void Manager::signalHandler(int signum) {
+    stopping = true;
+    sleep(10);
+    exit(signum);
 }
